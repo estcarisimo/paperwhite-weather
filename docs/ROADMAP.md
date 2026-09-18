@@ -55,10 +55,11 @@ Goal: real data, refreshed automatically, served on the LAN.
 - [ ] Civil dawn/dusk computed locally from coordinates (evaluate `astral`; otherwise
       implement the standard solar-position formulas with a `math`-marked test against a
       published table).
-- [ ] `paperwhite serve`: refresh every `refresh_minutes`, render both orientations, keep
+- [x] `paperwhite serve`: refresh every `refresh_minutes`, render both orientations, keep
       the last good snapshot, serve `/dashboard/{landscape,portrait}.png`, `/dashboard.png`
       and the `/health` identity on port 8765; systemd unit and Avahi service file for the
-      Raspberry Pi.
+      Raspberry Pi (installed on `smokingpi` 2026-09-18 with the mock provider).
+- [ ] Switch the installed unit to the live provider once it exists.
 - [ ] Offline frame when no snapshot has ever succeeded; "Updated" footer already covers
       stale data.
 
