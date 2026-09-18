@@ -101,3 +101,28 @@ def test_serve_reads_settings_from_the_environment(monkeypatch: pytest.MonkeyPat
 
     result = runner.invoke(app, ["serve", "--port", "28766"])
     assert result.exit_code == 0 and captured["port"] == 28766, "flags override the environment"
+
+
+def test_env_example_matches_the_serve_options() -> None:
+    """`.env.example` lists every PAPERWHITE_* variable `serve` reads, with the real default."""
+    from paperwhite_weather.cli import serve
+    from paperwhite_weather.service import DEFAULT_HOST, DEFAULT_PORT
+
+    text = (EXAMPLE_CONFIG.parent / ".env.example").read_text(encoding="utf-8")
+    documented = dict(
+        line.split("=", 1) for line in text.splitlines() if line and not line.startswith("#")
+    )
+    accepted = {info.envvar for info in serve.__defaults__ or () if getattr(info, "envvar", None)}
+    assert (
+        set(documented)
+        == accepted
+        == {
+            "PAPERWHITE_CONFIG",
+            "PAPERWHITE_PROVIDER",
+            "PAPERWHITE_HOST",
+            "PAPERWHITE_PORT",
+        }
+    )
+    assert documented["PAPERWHITE_HOST"] == DEFAULT_HOST
+    assert int(documented["PAPERWHITE_PORT"]) == DEFAULT_PORT
+    assert documented["PAPERWHITE_PROVIDER"] == "mock"

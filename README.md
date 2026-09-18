@@ -61,7 +61,8 @@ uv run paperwhite version
 ## 🔧 Configuration
 
 The service reads `PAPERWHITE_CONFIG`, `PAPERWHITE_PROVIDER`, `PAPERWHITE_HOST`, and
-`PAPERWHITE_PORT` from the environment (flags override them). The Kindle client will be told
+`PAPERWHITE_PORT` from the environment (flags override them); `.env.example` documents them
+and the systemd unit loads a git-ignored `.env`. The Kindle client will be told
 the server's hostname at install time; nothing assumes a particular machine name.
 
 `config.example.yaml` documents every option. Copy it to `config.yaml` (git-ignored):

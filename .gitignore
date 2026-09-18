@@ -20,6 +20,7 @@ config.*.yaml
 *.png
 !docs/img/*.png
 .env
+!.env.example
 
 # Editors and OS
 .DS_Store
