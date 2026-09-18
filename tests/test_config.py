@@ -12,20 +12,21 @@ def test_example_config_loads(settings: Settings) -> None:
     assert settings.location.timezone == "America/Chicago"
     assert settings.units.temperature == "fahrenheit"
     assert settings.display.skin == "minimal"
+    assert settings.display.orientation == "landscape"
     assert settings.display.native_size == (1072, 1448)
 
 
-def test_defaults_are_paperwhite_3_portrait_24h() -> None:
+def test_defaults_are_paperwhite_3_landscape_24h() -> None:
     display = Display()
     assert display.native_size == (1072, 1448)
-    assert display.canvas_size == (1072, 1448)
-    assert display.orientation == "portrait"
+    assert display.canvas_size == (1448, 1072)
+    assert display.orientation == "landscape"
     assert display.time_format == "24h"
 
 
-def test_landscape_canvas_is_transposed() -> None:
-    display = Display(orientation="landscape")
-    assert display.canvas_size == (1448, 1072)
+def test_portrait_canvas_is_native() -> None:
+    display = Display(orientation="portrait")
+    assert display.canvas_size == (1072, 1448)
     assert display.native_size == (1072, 1448)
 
 

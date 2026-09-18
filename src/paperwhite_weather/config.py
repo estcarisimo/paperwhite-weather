@@ -76,14 +76,14 @@ class Display(BaseModel):
     """How the dashboard is laid out and how often the device refreshes it.
 
     ``width`` and ``height`` are the device's native (portrait) framebuffer size. A
-    ``landscape`` orientation composes on a rotated canvas and rotates the result back to
-    native size, so the image always matches the framebuffer.
+    ``landscape`` orientation, the default, composes on a rotated canvas and rotates the
+    result back to native size, so the image always matches the framebuffer.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     skin: str = "minimal"
-    orientation: Orientation = "portrait"
+    orientation: Orientation = "landscape"
     width: int = Field(default=PAPERWHITE_3_WIDTH, gt=0)
     height: int = Field(default=PAPERWHITE_3_HEIGHT, gt=0)
     time_format: TimeFormat = "24h"

@@ -134,3 +134,46 @@ def test_minimal_skin_keeps_margins_clear(
         (width - border, 0, width, height),
     ):
         assert image.crop(box).getextrema() == (255, 255), f"ink in border {box} ({orientation})"
+
+
+def test_minimal_landscape_is_two_columns(snapshot: WeatherSnapshot, settings: Settings) -> None:
+    """A vertical gutter of white separates the two landscape columns.
+
+    The pre-existing single-column layout scaled to landscape ran the clock and the
+    temperature line across the whole width, so no full-height white gutter existed; this
+    fails on that renderer.
+    """
+    display = settings.display.model_copy(update={"orientation": "landscape"})
+    settings = settings.model_copy(update={"display": display})
+    width, height = display.canvas_size
+    image = get_skin("minimal").compose(snapshot, settings, FIXED_NOW, (width, height))
+    # Gutter position mirrors MinimalSkin.compose_landscape: margin + 56% of the content
+    # width; probe a narrow strip there over the top 85% of the canvas (above the footer).
+    margin = round(0.06 * min(width, height))
+    gutter = round(60 * min(width / 1448, height / 1072))
+    left_width = round((width - 2 * margin - gutter) * 0.56)
+    x = margin + left_width + gutter // 2
+    strip = image.crop((x - 4, 0, x + 4, round(height * 0.85)))
+    assert strip.getextrema() == (255, 255), "ink found in the gutter between the two columns"
+    left = image.crop((0, 0, x, round(height * 0.85)))
+    right = image.crop((x, 0, width, round(height * 0.85)))
+    assert left.getextrema()[0] == 0 and right.getextrema()[0] == 0, "both columns carry ink"
+
+
+@pytest.mark.behaviour
+def test_minimal_skin_handles_a_single_day_forecast(
+    snapshot: WeatherSnapshot, settings: Settings
+) -> None:
+    """Characterization test: a one-day forecast renders in both layouts without error.
+
+    Not a regression guard for a specific change; it pins that the forecast block is
+    optional for every layout the skin has.
+    """
+    only_today = snapshot.model_copy(update={"daily": snapshot.daily[:1]})
+    for orientation in ("portrait", "landscape"):
+        display = settings.display.model_copy(update={"orientation": orientation})
+        size = display.canvas_size
+        image = get_skin("minimal").compose(
+            only_today, settings.model_copy(update={"display": display}), FIXED_NOW, size
+        )
+        assert image.size == size

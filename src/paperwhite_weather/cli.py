@@ -37,6 +37,9 @@ def render(
     output: Path = typer.Option(..., "--output", "-o", help="Where to write the PNG."),
     provider: str = typer.Option("mock", "--provider", "-p", help="Weather provider name."),
     skin: str | None = typer.Option(None, "--skin", "-s", help="Override display.skin."),
+    orientation: str | None = typer.Option(
+        None, "--orientation", help="Override display.orientation (landscape | portrait)."
+    ),
     now: datetime | None = typer.Option(
         None,
         "--now",
@@ -46,10 +49,15 @@ def render(
 ) -> None:
     """Fetch weather with PROVIDER and render one dashboard frame to OUTPUT."""
     settings = load_settings(config)
-    if skin is not None:
-        settings = settings.model_copy(
-            update={"display": settings.display.model_copy(update={"skin": skin})}
-        )
+    overrides = {
+        key: value
+        for key, value in (("skin", skin), ("orientation", orientation))
+        if value is not None
+    }
+    if overrides:
+        # Re-validate so an unknown orientation fails the same way it would in the file.
+        display = settings.display.model_validate(settings.display.model_dump() | overrides)
+        settings = settings.model_copy(update={"display": display})
     # The mock provider takes the pinned time too, so a fixed --now gives a reproducible frame.
     source = MockProvider(now=now) if provider == MockProvider.name else get_provider(provider)
     weather = source.fetch(settings.location, settings.units)
