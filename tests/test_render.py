@@ -134,3 +134,29 @@ def test_minimal_skin_keeps_margins_clear(
         (width - border, 0, width, height),
     ):
         assert image.crop(box).getextrema() == (255, 255), f"ink in border {box} ({orientation})"
+
+
+def test_minimal_landscape_uses_the_full_width(
+    snapshot: WeatherSnapshot, settings: Settings
+) -> None:
+    """Landscape is a two-column layout, so the right third of the canvas carries ink."""
+    display = settings.display.model_copy(update={"orientation": "landscape"})
+    settings = settings.model_copy(update={"display": display})
+    width, height = display.canvas_size
+    image = get_skin("minimal").compose(snapshot, settings, FIXED_NOW, (width, height))
+    right_third = image.crop((round(width * 2 / 3), 0, width, round(height * 0.6)))
+    assert right_third.getextrema()[0] == 0, "no ink in the right column of the landscape layout"
+
+
+def test_minimal_skin_handles_a_single_day_forecast(
+    snapshot: WeatherSnapshot, settings: Settings
+) -> None:
+    """With no upcoming days the forecast strip is skipped and nothing crashes."""
+    only_today = snapshot.model_copy(update={"daily": snapshot.daily[:1]})
+    for orientation in ("portrait", "landscape"):
+        display = settings.display.model_copy(update={"orientation": orientation})
+        size = display.canvas_size
+        image = get_skin("minimal").compose(
+            only_today, settings.model_copy(update={"display": display}), FIXED_NOW, size
+        )
+        assert image.size == size

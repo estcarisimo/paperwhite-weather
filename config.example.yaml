@@ -11,7 +11,7 @@ units:
 
 display:
   skin: minimal            # see `paperwhite skins`
-  orientation: portrait    # portrait | landscape
+  orientation: landscape   # landscape | portrait
   width: 1072              # Kindle Paperwhite 3 native framebuffer
   height: 1448
   time_format: 12h         # 12h | 24h

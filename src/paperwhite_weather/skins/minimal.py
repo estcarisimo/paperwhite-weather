@@ -1,4 +1,9 @@
-"""Minimal skin: a large clock and temperature, today's range, a compact forecast."""
+"""Minimal skin: a large clock and temperature, today's range, sun times, a compact forecast.
+
+Two layouts share the same building blocks: a single column in portrait and two columns in
+landscape, so the landscape frame uses the full width instead of being a scaled-down
+portrait page.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +14,7 @@ from PIL import Image, ImageDraw
 
 from paperwhite_weather.config import Settings
 from paperwhite_weather.fonts import load_font
-from paperwhite_weather.models import WeatherSnapshot
+from paperwhite_weather.models import DailyForecast, SunTimes, WeatherSnapshot
 from paperwhite_weather.skins.base import (
     BLACK,
     CONDITION_LABELS,
@@ -21,11 +26,11 @@ from paperwhite_weather.skins.base import (
     format_temperature,
 )
 
-#: The layout is designed for the Paperwhite 3 portrait canvas and scaled down uniformly
-#: when either dimension of the actual canvas is smaller (for example in landscape).
-_DESIGN_WIDTH = 1072
-_DESIGN_HEIGHT = 1448
-_FORECAST_DAYS = 5
+#: The layout is designed for the Paperwhite 3 canvas (1072x1448 portrait, 1448x1072
+#: landscape) and scaled down uniformly when the actual canvas is smaller.
+_DESIGN_PORTRAIT = (1072, 1448)
+_DESIGN_LANDSCAPE = (1448, 1072)
+_FORECAST_DAYS = 4
 
 
 class MinimalSkin:
@@ -42,140 +47,234 @@ class MinimalSkin:
     ) -> Image.Image:
         """See :meth:`paperwhite_weather.skins.base.Skin.compose`."""
         width, height = size
-        scale = min(width / _DESIGN_WIDTH, height / _DESIGN_HEIGHT)
-        margin = round(0.06 * width)
-        content_width = width - 2 * margin
-        tz = snapshot.location.tzinfo
-        time_format = settings.display.time_format
-
         image = Image.new("L", size, WHITE)
-        draw = ImageDraw.Draw(image)
+        frame = _Frame(image, snapshot, settings, now)
+        if width > height:
+            frame.compose_landscape()
+        else:
+            frame.compose_portrait()
+        return image
 
-        def px(design_px: float) -> int:
-            return max(1, round(design_px * scale))
 
-        # Masthead: date and clock.
-        y = margin
-        draw.text(
-            (margin, y),
-            f"{now:%A}, {now:%B} {now.day}",
-            font=load_font("bold", px(46)),
-            fill=BLACK,
-            anchor="la",
-        )
-        y += px(70)
-        clock = format_clock(now, time_format)
-        draw.text(
-            (margin, y),
-            clock,
-            font=fit_font(draw, clock, "bold", px(230), content_width),
-            fill=BLACK,
-            anchor="la",
-        )
-        y += px(290)
-        draw.line([(margin, y), (width - margin, y)], fill=BLACK, width=px(4))
-        y += px(40)
+class _Frame:
+    """One frame being drawn; holds the shared state the layout helpers need."""
 
-        # Lead: current temperature and conditions.
-        temperature_font = load_font("bold", px(210))
-        draw.text(
-            (margin, y),
-            format_temperature(snapshot.current.temperature),
-            font=temperature_font,
+    def __init__(
+        self,
+        image: Image.Image,
+        snapshot: WeatherSnapshot,
+        settings: Settings,
+        now: datetime,
+    ) -> None:
+        self.draw = ImageDraw.Draw(image)
+        self.width, self.height = image.size
+        self.snapshot = snapshot
+        self.now = now
+        self.tz = snapshot.location.tzinfo
+        self.time_format = settings.display.time_format
+        design = _DESIGN_LANDSCAPE if self.width > self.height else _DESIGN_PORTRAIT
+        self.scale = min(self.width / design[0], self.height / design[1])
+        self.margin = round(0.06 * min(self.width, self.height))
+
+    def px(self, design_px: float) -> int:
+        """Scale a design measurement to canvas pixels, never below one pixel."""
+        return max(1, round(design_px * self.scale))
+
+    # Layouts
+
+    def compose_portrait(self) -> None:
+        x = self.margin
+        content_width = self.width - 2 * self.margin
+        y = self.margin
+        y = self.masthead(x, y, content_width, clock_size=230)
+        y = self.rule(x, y, content_width, BLACK, 4)
+        y = self.lead(x, y + self.px(40), content_width)
+        y = self.sun_line(x, y + self.px(20), content_width)
+        y = self.rule(x, y + self.px(30), content_width, LIGHT_GRAY, 2)
+        self.forecast_columns(x, y + self.px(40), content_width)
+        self.footer()
+
+    def compose_landscape(self) -> None:
+        gutter = self.px(60)
+        left_width = round((self.width - 2 * self.margin - gutter) * 0.56)
+        right_x = self.margin + left_width + gutter
+        right_width = self.width - self.margin - right_x
+
+        y = self.margin
+        y = self.masthead(self.margin, y, left_width, clock_size=250)
+        y = self.rule(self.margin, y, left_width, BLACK, 4)
+        self.lead(self.margin, y + self.px(50), left_width)
+
+        y = self.margin
+        y = self.sun_block(right_x, y, right_width)
+        y = self.rule(right_x, y + self.px(30), right_width, LIGHT_GRAY, 2)
+        self.forecast_rows(right_x, y + self.px(30), right_width)
+        self.footer()
+
+    # Building blocks; each returns the y coordinate below what it drew.
+
+    def masthead(self, x: int, y: int, width: int, clock_size: int) -> int:
+        self.draw.text(
+            (x, y),
+            f"{self.now:%A}, {self.now:%B} {self.now.day}",
+            font=load_font("bold", self.px(46)),
             fill=BLACK,
             anchor="la",
         )
-        temperature_width = draw.textlength(
-            format_temperature(snapshot.current.temperature), font=temperature_font
-        )
-        detail_x = margin + temperature_width + px(30)
-        draw.text(
-            (detail_x, y + px(30)),
-            CONDITION_LABELS[snapshot.current.condition],
-            font=load_font("regular", px(56)),
-            fill=BLACK,
-            anchor="la",
-        )
-        today = snapshot.today
-        draw.text(
-            (detail_x, y + px(110)),
-            f"H {format_temperature(today.temperature_high)}   "
-            f"L {format_temperature(today.temperature_low)}",
-            font=load_font("regular", px(48)),
-            fill=DARK_GRAY,
-            anchor="la",
-        )
+        y += self.px(70)
+        clock = format_clock(self.now, self.time_format)
+        font = fit_font(self.draw, clock, "bold", self.px(clock_size), width)
+        self.draw.text((x, y), clock, font=font, fill=BLACK, anchor="la")
+        return y + round(font.size * 1.25)
+
+    def rule(self, x: int, y: int, width: int, fill: int, thickness: int) -> int:
+        self.draw.line([(x, y), (x + width, y)], fill=fill, width=self.px(thickness))
+        return y + self.px(thickness)
+
+    def lead(self, x: int, y: int, width: int) -> int:
+        """Current temperature with conditions and today's range beside it."""
+        current = self.snapshot.current
+        today = self.snapshot.today
+        temperature = format_temperature(current.temperature)
+        font = fit_font(self.draw, temperature, "bold", self.px(210), width * 0.5)
+        self.draw.text((x, y), temperature, font=font, fill=BLACK, anchor="la")
+        detail_x = x + round(self.draw.textlength(temperature, font=font)) + self.px(30)
+        detail_width = x + width - detail_x
+        lines = [
+            (CONDITION_LABELS[current.condition], 56, BLACK),
+            (
+                f"H {format_temperature(today.temperature_high)}   "
+                f"L {format_temperature(today.temperature_low)}",
+                48,
+                DARK_GRAY,
+            ),
+        ]
         if today.precipitation_probability is not None:
-            draw.text(
-                (detail_x, y + px(175)),
-                f"Precipitation {round(today.precipitation_probability)}%",
-                font=load_font("regular", px(40)),
-                fill=DARK_GRAY,
-                anchor="la",
+            lines.append(
+                (f"Precipitation {round(today.precipitation_probability)}%", 40, DARK_GRAY)
             )
-        y += px(280)
+        line_y = y + self.px(30)
+        for text, size, fill in lines:
+            line_font = fit_font(self.draw, text, "regular", self.px(size), detail_width)
+            self.draw.text((detail_x, line_y), text, font=line_font, fill=fill, anchor="la")
+            line_y += round(line_font.size * 1.4)
+        return max(y + round(font.size * 1.3), line_y)
 
-        # Sun events.
-        sun = snapshot.sun
-        sun_text = "   ".join(
-            f"{label} {format_clock(moment.astimezone(tz), time_format)}"
+    def sun_events(self) -> list[tuple[str, str]]:
+        sun: SunTimes = self.snapshot.sun
+        return [
+            (label, format_clock(moment.astimezone(self.tz), self.time_format))
             for label, moment in (
                 ("Dawn", sun.civil_dawn),
                 ("Sunrise", sun.sunrise),
                 ("Sunset", sun.sunset),
                 ("Dusk", sun.civil_dusk),
             )
-        )
-        draw.text(
-            (margin, y),
-            sun_text,
-            font=fit_font(draw, sun_text, "regular", px(34), content_width),
-            fill=BLACK,
-            anchor="la",
-        )
-        y += px(70)
-        draw.line([(margin, y), (width - margin, y)], fill=LIGHT_GRAY, width=px(2))
-        y += px(40)
+        ]
 
-        # Forecast strip: the next days after today.
-        upcoming = snapshot.daily[1 : _FORECAST_DAYS + 1]
-        if upcoming:
-            column_width = content_width / len(upcoming)
-            for index, day in enumerate(upcoming):
-                center_x = margin + column_width * (index + 0.5)
-                draw.text(
-                    (center_x, y),
-                    f"{day.date:%a}",
-                    font=load_font("bold", px(40)),
-                    fill=BLACK,
-                    anchor="ma",
-                )
-                draw.text(
-                    (center_x, y + px(55)),
+    def sun_line(self, x: int, y: int, width: int) -> int:
+        """All four sun events on one line (portrait)."""
+        text = "   ".join(f"{label} {clock}" for label, clock in self.sun_events())
+        font = fit_font(self.draw, text, "regular", self.px(34), width)
+        self.draw.text((x, y), text, font=font, fill=BLACK, anchor="la")
+        return y + round(font.size * 1.5)
+
+    def sun_block(self, x: int, y: int, width: int) -> int:
+        """Sun events as a two-by-two grid (landscape)."""
+        self.draw.text((x, y), "Sun", font=load_font("bold", self.px(40)), fill=BLACK, anchor="la")
+        y += self.px(60)
+        column = width / 2
+        label_font = load_font("regular", self.px(30))
+        value_font = load_font("bold", self.px(44))
+        for index, (label, clock) in enumerate(self.sun_events()):
+            cell_x = x + round(column * (index % 2))
+            cell_y = y + self.px(105) * (index // 2)
+            self.draw.text((cell_x, cell_y), label, font=label_font, fill=DARK_GRAY, anchor="la")
+            self.draw.text(
+                (cell_x, cell_y + self.px(34)), clock, font=value_font, fill=BLACK, anchor="la"
+            )
+        return y + self.px(105) * 2
+
+    def upcoming(self) -> list[DailyForecast]:
+        return self.snapshot.daily[1 : _FORECAST_DAYS + 1]
+
+    def forecast_columns(self, x: int, y: int, width: int) -> int:
+        """Next days side by side (portrait)."""
+        days = self.upcoming()
+        if not days:
+            return y
+        column = width / len(days)
+        for index, day in enumerate(days):
+            center = x + column * (index + 0.5)
+            self.draw.text(
+                (center, y),
+                f"{day.date:%a}",
+                font=load_font("bold", self.px(40)),
+                fill=BLACK,
+                anchor="ma",
+            )
+            self.draw.text(
+                (center, y + self.px(55)),
+                CONDITION_LABELS[day.condition],
+                font=fit_font(
+                    self.draw,
                     CONDITION_LABELS[day.condition],
-                    font=load_font("regular", px(28)),
-                    fill=DARK_GRAY,
-                    anchor="ma",
-                )
-                draw.text(
-                    (center_x, y + px(100)),
-                    f"{format_temperature(day.temperature_high)} / "
-                    f"{format_temperature(day.temperature_low)}",
-                    font=load_font("regular", px(36)),
-                    fill=BLACK,
-                    anchor="ma",
-                )
+                    "regular",
+                    self.px(28),
+                    column * 0.95,
+                ),
+                fill=DARK_GRAY,
+                anchor="ma",
+            )
+            self.draw.text(
+                (center, y + self.px(100)),
+                _temperature_range(day),
+                font=load_font("regular", self.px(36)),
+                fill=BLACK,
+                anchor="ma",
+            )
+        return y + self.px(150)
 
-        # Footer: data freshness and units, so stale data is obvious.
-        footer = (
-            f"Updated {format_clock(snapshot.fetched_at.astimezone(tz), time_format)}"
+    def forecast_rows(self, x: int, y: int, width: int) -> int:
+        """Next days as rows: weekday, condition, high / low (landscape)."""
+        row_height = self.px(96)
+        day_font = load_font("bold", self.px(40))
+        range_font = load_font("regular", self.px(40))
+        for day in self.upcoming():
+            self.draw.text((x, y), f"{day.date:%a}", font=day_font, fill=BLACK, anchor="la")
+            condition = CONDITION_LABELS[day.condition]
+            self.draw.text(
+                (x + self.px(110), y + self.px(6)),
+                condition,
+                font=fit_font(self.draw, condition, "regular", self.px(32), width * 0.45),
+                fill=DARK_GRAY,
+                anchor="la",
+            )
+            self.draw.text(
+                (x + width, y),
+                _temperature_range(day),
+                font=range_font,
+                fill=BLACK,
+                anchor="ra",
+            )
+            y += row_height
+        return y
+
+    def footer(self) -> None:
+        """Data freshness and units, bottom right, so stale data is obvious."""
+        snapshot = self.snapshot
+        text = (
+            f"Updated {format_clock(snapshot.fetched_at.astimezone(self.tz), self.time_format)}"
             f"  ·  {snapshot.source}  ·  {snapshot.units.temperature_symbol}"
         )
-        draw.text(
-            (width - margin, height - margin),
-            footer,
-            font=load_font("regular", px(28)),
+        self.draw.text(
+            (self.width - self.margin, self.height - self.margin),
+            text,
+            font=load_font("regular", self.px(28)),
             fill=DARK_GRAY,
             anchor="rd",
         )
-        return image
+
+
+def _temperature_range(day: DailyForecast) -> str:
+    return f"{format_temperature(day.temperature_high)} / {format_temperature(day.temperature_low)}"

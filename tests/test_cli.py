@@ -38,7 +38,7 @@ def test_render_writes_native_size_png(tmp_path: Path) -> None:
         ],
     )
     assert result.exit_code == 0, result.output
-    assert "Rendered skin 'minimal' (portrait, 1072x1448)" in result.output
+    assert "Rendered skin 'minimal' (landscape, 1072x1448)" in result.output
     assert "fetched at 2026-09-18 21:45 UTC" in result.output  # mock honors --now
     with Image.open(output) as image:
         assert image.format == "PNG"
@@ -62,3 +62,20 @@ def test_render_unknown_provider_fails(tmp_path: Path) -> None:
     )
     assert result.exit_code != 0
     assert "available: mock" in str(result.exception)
+
+
+def test_render_orientation_override(tmp_path: Path) -> None:
+    output = tmp_path / "portrait.png"
+    result = runner.invoke(
+        app,
+        ["render", "-c", str(EXAMPLE_CONFIG), "-o", str(output), "--orientation", "portrait"],
+    )
+    assert result.exit_code == 0, result.output
+    assert "(portrait, 1072x1448)" in result.output
+
+    result = runner.invoke(
+        app,
+        ["render", "-c", str(EXAMPLE_CONFIG), "-o", str(output), "--orientation", "sideways"],
+    )
+    assert result.exit_code != 0
+    assert "orientation" in str(result.exception)

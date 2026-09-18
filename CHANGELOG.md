@@ -13,10 +13,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - Provider-independent weather data model (`WeatherSnapshot`) with UTC-aware timestamps.
 - `mock` provider with deterministic fixture data for developing skins offline.
 - `minimal` skin: large clock and temperature, today's range, sun events, and a
-  four-day forecast strip. Text only; icons are planned.
+  four-day forecast. Text only; icons are planned. Portrait is a single column;
+  landscape is a two-column layout that uses the full width.
+- `--orientation` option on `paperwhite render` to override the configured orientation.
 - Renderer that composes a skin at the Kindle Paperwhite 3 native size (1072x1448),
   supports portrait and landscape, and quantizes to 16 gray levels.
 - `paperwhite` CLI: `render`, `skins`, `providers`, `version`.
 - Design docs: `docs/ARCHITECTURE.md`, `docs/DEVICE.md`, `docs/ROADMAP.md`.
 - `docs/REPOSITORY_STATE.md`: verified repository settings (ruleset, security features, CI)
   with dates and evidence.
+- Decision record in `docs/ARCHITECTURE.md`: architecture accepted; landscape default;
+  both orientations served; tap to switch orientation; DNS-name discovery on port 8765.
+- Jailbreak runbook for the Paperwhite 3 on 5.16.2.1.1 in `docs/DEVICE.md`.
+
+### Changed
+- Default orientation is now `landscape` (was `portrait`).

@@ -1,7 +1,7 @@
 # Architecture
 
-Status: **proposed** (2026-09-18). This is the decision the foundation is built on; it is
-open for discussion until Sprint 1 starts, and then it is a decision record.
+Status: **accepted** by the maintainer on 2026-09-18. This is a decision record; changes
+go through a pull request that updates this file.
 
 ## Decision: client-server, with the Kindle as a thin display
 
@@ -24,10 +24,75 @@ flowchart LR
 | Skin | server | Draw one frame on a canvas of a given size; several skins share the same data |
 | Renderer | server | Pick the skin, handle orientation, quantize to the panel's gray levels |
 | Service (Sprint 2) | server | Refresh on a schedule, cache the last good snapshot, serve the PNG over HTTP |
-| Kindle client (Sprint 3) | Kindle | Wake, join Wi-Fi, download the PNG, write it with `eips`, sleep |
+| Kindle client (Sprint 3) | Kindle | Wake, join Wi-Fi, download the PNG, write it with `eips`, sleep; a tap switches orientation |
 
-The "server" is any always-on machine on the same network. The reference deployment is
-the Raspberry Pi 5 that already hosts this repository's development environment.
+The server is the maintainer's Raspberry Pi 5 (`smokingpi`), which is always on and
+already hosts other LAN services. Any always-on machine on the same network works.
+
+## Decisions (2026-09-18)
+
+| Decision | Choice | Notes |
+| --- | --- | --- |
+| Architecture | Client-server as above | Accepted |
+| Server | Raspberry Pi on the LAN, plain HTTP | HTTPS on the Kindle's BusyBox `wget` is unreliable; the LAN is the trust boundary |
+| Orientation | **Both** rendered on every refresh; **landscape is the default** | The maintainer expects to use it mostly in landscape |
+| Switching orientation | A **tap on the screen** toggles between landscape and portrait on the device | The Paperwhite 3 has no accelerometer and no buttons besides power; touch is the only input. Design below, validated in Sprint 1 |
+| Discovery | DNS name of the Pi (`smokingpi.lan`) with fallbacks | Design and evidence below |
+| Skins | Last (Sprint 4), and where most refinement time goes | `minimal` is enough to bring the device up |
+| Languages | Python on the server, POSIX shell on the Kindle | See "Language choice" |
+
+### Orientation and the tap gesture
+
+The server renders both orientations from the same snapshot and publishes both:
+
+```
+GET /dashboard/landscape.png
+GET /dashboard/portrait.png
+GET /dashboard.png            → the configured default (display.orientation)
+GET /health                   → JSON identity, see Discovery
+```
+
+The Kindle keeps one bit of state, its current orientation, in a file on the device. A
+tap toggles the bit and refreshes immediately with the other image; the periodic refresh
+uses whatever the bit says. The server never needs to know which orientation is on the
+wall, and the two images are always consistent because they come from the same render.
+
+Reading the tap: the touch controller is `/dev/input/event*` (the exact node is recorded
+in `docs/DEVICE.md` once verified). Each event is a fixed-size struct; the client reads
+with a timeout (`timeout <s> dd bs=<struct> count=1`) while the device is awake, and any
+event counts as a tap. This is deliberately crude: one gesture, one action. Whether the
+stock GUI must be stopped for the raw events to reach the script, and whether the device
+can stay awake long enough to be tapped, are Sprint 1 measurements.
+
+### Discovery: how the Kindle finds the Pi
+
+Verified on this network on 2026-09-18 from the Pi:
+
+| Fact | Evidence |
+| --- | --- |
+| The router (`192.168.86.1`, the DHCP server and DNS resolver) resolves DHCP client hostnames under `.lan` | `getent hosts smokingpi.lan` → `192.168.86.27`; `/etc/resolv.conf` has `search lan` |
+| The Pi runs Avahi (mDNS) as well | `systemctl is-active avahi-daemon` → `active` |
+| Port `8080` is taken on the Pi by another service | `ss -ltn`; Docker publishes `8080`, `3000`, `8086`, `80` |
+
+Because the Kindle gets its DNS server from the same router, `http://smokingpi.lan:8765/`
+resolves on the device with no mDNS support needed. The service listens on **port 8765**.
+
+The client resolves the server in this order and stops at the first `/health` that answers
+with the expected identity:
+
+1. `SERVER_URL` from the client's config file, if set.
+2. `http://<server-hostname>.lan:8765` (default hostname `smokingpi`).
+3. `http://<server-hostname>.local:8765` (works only where the resolver does mDNS).
+4. A scan of the default gateway's `/24` for `/health` with a one-second timeout per
+   host, in parallel batches. Slow (tens of seconds) but needs no configuration.
+
+`/health` returns `{"service": "paperwhite-weather", "version": "...", "rendered_at": "...",
+"orientations": ["landscape", "portrait"]}` so the scan can tell this service from any
+other web server on the LAN. The Pi also advertises `_paperwhite-weather._tcp` through
+Avahi for clients that can browse mDNS; the Kindle probably cannot, so this is for tooling.
+
+A DHCP reservation for the Pi on the router is recommended but not required: the name
+survives an address change, the scan survives a name change.
 
 ### Why this shape
 

@@ -16,26 +16,34 @@ Goal: a public repository a contributor can clone, run, and extend without a Kin
 - [x] `mock` provider and `minimal` skin; renderer with orientation and quantization.
 - [x] `paperwhite render` CLI; tests with a coverage floor.
 - [x] Architecture decision, device notes, this roadmap.
-- [ ] Agree on the architecture (client-server) and this plan.
+- [x] Architecture (client-server, Pi as server) and this plan accepted by the maintainer
+      (2026-09-18). Decisions: landscape default, both orientations served, tap to switch,
+      DNS-name discovery, skins last.
+- [x] Real landscape layout for `minimal`; `--orientation` on the CLI.
 
-Done when: CI is green on `main`, the ruleset is active, and the decision in
-`docs/ARCHITECTURE.md` is accepted.
+Done: CI green on `main`, ruleset active, decision accepted.
 
 ## Sprint 1 — Device bring-up (M0)
 
 Goal: shell access to the Kindle and a static image on its screen.
 
-- [ ] Re-read the current WinterBreak thread; jailbreak the Paperwhite 3; install the
-      hotfix, KUAL, MRPI, USBNetwork.
-- [ ] Record `eips -i`, `uname -a`, tool availability, and package versions in
-      `docs/DEVICE.md`; move the panel geometry from "assumed" to "verified".
-- [ ] Copy a `paperwhite render` PNG to the device and display it with `eips -g`.
+- [ ] Jailbreak the Paperwhite 3 with WinterBreak2 (runbook in `docs/DEVICE.md`:
+      fill the disk against OTA, stage `winterbreak2/`, browser step on the device);
+      install KUAL, MRPI, USBNetwork.
+- [ ] Record `eips -i`, `uname -a`, tool availability, input device nodes, and package
+      versions in `docs/DEVICE.md`; move the panel geometry from "assumed" to "verified".
+- [ ] Copy a `paperwhite render` PNG to the device and display it with `eips -g`, in both
+      orientations; confirm the landscape rotation direction.
+- [ ] From the device: `wget -O /dev/null http://smokingpi.lan:8765/health` to confirm
+      DNS-name discovery works from the Kindle's resolver.
+- [ ] Probe touch: which `/dev/input/event*` node fires on a tap, and whether it fires
+      with the stock GUI running.
 - [ ] Check readability of the `minimal` skin from across a room; adjust type sizes.
 - [ ] Measure: Wi-Fi reconnect time, whether RTC wake from suspend works, idle battery
       drain over a night.
 
-Done when: a frame rendered by this package is on the e-ink panel and `docs/DEVICE.md`
-has no "assumed" entries left for the panel and the toolchain.
+Done when: a frame rendered by this package is on the e-ink panel in landscape and
+`docs/DEVICE.md` has no "assumed" entries left for the panel, the toolchain, and touch.
 
 ## Sprint 2 — Live weather service (M2)
 
@@ -47,8 +55,10 @@ Goal: real data, refreshed automatically, served on the LAN.
 - [ ] Civil dawn/dusk computed locally from coordinates (evaluate `astral`; otherwise
       implement the standard solar-position formulas with a `math`-marked test against a
       published table).
-- [ ] `paperwhite serve`: refresh every `refresh_minutes`, keep the last good snapshot,
-      serve `/dashboard.png` and `/health` on the LAN; systemd unit for the Raspberry Pi.
+- [ ] `paperwhite serve`: refresh every `refresh_minutes`, render both orientations, keep
+      the last good snapshot, serve `/dashboard/{landscape,portrait}.png`, `/dashboard.png`
+      and the `/health` identity on port 8765; systemd unit and Avahi service file for the
+      Raspberry Pi.
 - [ ] Offline frame when no snapshot has ever succeeded; "Updated" footer already covers
       stale data.
 
@@ -58,8 +68,10 @@ Done when: the Pi serves a live frame that updates on schedule and survives an A
 
 Goal: the dashboard runs unattended on the wall.
 
-- [ ] `kindle/paperwhite.sh`: fetch, display, periodic full clear against ghosting, RTC
-      wake and suspend, Wi-Fi handling, fallback to the cached image.
+- [ ] `kindle/paperwhite.sh`: discover the server (config → `.lan` → `.local` → scan),
+      fetch the image for the current orientation, display, periodic full clear against
+      ghosting, RTC wake and suspend, Wi-Fi handling, fallback to the cached image.
+- [ ] Tap to toggle orientation, persisted on the device.
 - [ ] KUAL extension to start/stop it; install instructions verified on the device.
 - [ ] Battery measurement over a week at 15-minute refresh; decide on the clock question.
 - [ ] Photos of the device for the README.
@@ -68,7 +80,8 @@ Done when: the Kindle has shown live weather for seven days without manual inter
 
 ## Sprint 4 — Skins and icons (M3)
 
-Goal: the five skins from the concept, selectable by configuration.
+Goal: the five skins from the concept, selectable by configuration. This is where most of
+the refinement time goes, once the device runs unattended.
 
 - [ ] Monochrome condition icon set (own drawings or a permissively licensed set, with the
       license file next to it).

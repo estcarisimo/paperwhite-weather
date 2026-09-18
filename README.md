@@ -14,7 +14,7 @@ displays it.
 
 ## ✨ Features
 
-- 🖼️ **Kindle-native rendering**: 1072x1448 grayscale PNG, quantized to the panel's 16 gray levels, portrait or landscape
+- 🖼️ **Kindle-native rendering**: 1072x1448 grayscale PNG, quantized to the panel's 16 gray levels, landscape (default) or portrait, each with its own layout
 - 🎨 **Skins on one data model**: layouts are independent of the weather source; `minimal` ships today, four more are planned
 - 🔌 **Pluggable providers**: a deterministic `mock` provider today; Open-Meteo next
 - 🕒 **Honest timestamps**: every frame shows when its data was fetched, so stale data is obvious
@@ -43,8 +43,9 @@ uv run paperwhite render --config config.example.yaml --output dashboard.png
 # Pin the clock for reproducible output; the value must carry a UTC offset
 uv run paperwhite render -c config.example.yaml -o dashboard.png --now 2026-09-18T21:45:00+00:00
 
-# Try a skin without editing the config
+# Try a skin or the other orientation without editing the config
 uv run paperwhite render -c config.example.yaml -o dashboard.png --skin minimal
+uv run paperwhite render -c config.example.yaml -o dashboard.png --orientation portrait
 
 # What is available
 uv run paperwhite skins
@@ -69,7 +70,7 @@ units:
 
 display:
   skin: minimal            # see `paperwhite skins`
-  orientation: portrait    # portrait | landscape
+  orientation: landscape   # landscape | portrait
   width: 1072              # Kindle Paperwhite 3 native framebuffer
   height: 1448
   time_format: 12h         # 12h | 24h
@@ -115,7 +116,7 @@ Every change lands through a pull request with green CI and an independent revie
 ```
 $ uv run paperwhite render --config config.example.yaml --output dashboard.png --now 2026-09-18T21:45:00+00:00
 INFO paperwhite_weather.render: Rendering skin 'minimal' on a 1072x1448 canvas
-Rendered skin 'minimal' (portrait, 1072x1448) from 'mock' data fetched at 2026-09-18 21:45 UTC -> dashboard.png
+Rendered skin 'minimal' (landscape, 1072x1448) from 'mock' data fetched at 2026-09-18 21:45 UTC -> dashboard.png
 
 $ uv run paperwhite skins
 minimal
@@ -124,12 +125,15 @@ $ uv run paperwhite version
 paperwhite-weather 0.1.0
 ```
 
-The `minimal` skin rendered from the mock provider (portrait, actual 1072x1448 output
-scaled down):
+The `minimal` skin rendered from the mock provider, scaled down. The landscape frame is
+shown as it looks on the wall; the PNG the Kindle receives is rotated to the portrait
+framebuffer.
 
 <p align="center">
-  <img src="docs/img/minimal-portrait.png" alt="Minimal skin, portrait" width="360">
-  <img src="docs/img/minimal-landscape.png" alt="Minimal skin, landscape (rotated for the portrait framebuffer)" width="360">
+  <img src="docs/img/minimal-landscape-view.png" alt="Minimal skin, landscape" width="560">
+</p>
+<p align="center">
+  <img src="docs/img/minimal-portrait.png" alt="Minimal skin, portrait" width="300">
 </p>
 
 ## 🤝 Contributing
