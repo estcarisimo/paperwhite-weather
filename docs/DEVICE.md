@@ -85,6 +85,10 @@ Done from the Pi again:
     (`renameotabin` is included by WinterBreak; verify with the *Check OTA Status*
     scriptlet).
 
+For the first on-device display test, `docs/img/minimal-landscape.png` is a landscape
+frame already rotated to the portrait framebuffer, and `docs/img/minimal-portrait.png`
+is the portrait one; copy either to the device and run `eips -g <file>`.
+
 Record after step 11: `eips -i`, `uname -a`, `cat /etc/prettyversion.txt`, `which wget
 curl eips lipc-set-prop lipc-get-prop rtcwake`, `ls /dev/input/`, and `cat
 /proc/bus/input/devices` (which node is the touch controller). Then move the panel

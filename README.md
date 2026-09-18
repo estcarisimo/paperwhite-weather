@@ -115,7 +115,7 @@ Every change lands through a pull request with green CI and an independent revie
 
 ```
 $ uv run paperwhite render --config config.example.yaml --output dashboard.png --now 2026-09-18T21:45:00+00:00
-INFO paperwhite_weather.render: Rendering skin 'minimal' on a 1072x1448 canvas
+INFO paperwhite_weather.render: Rendering skin 'minimal' on a 1448x1072 canvas
 Rendered skin 'minimal' (landscape, 1072x1448) from 'mock' data fetched at 2026-09-18 21:45 UTC -> dashboard.png
 
 $ uv run paperwhite skins
