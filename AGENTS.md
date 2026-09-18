@@ -38,7 +38,7 @@ src/paperwhite_weather/
   skins/            base.py (Skin protocol, format helpers, CONDITION_LABELS),
                     minimal.py; registry in __init__.py: get_skin(name), available_skins()
   render.py         render_dashboard(snapshot, settings, now) -> "L" image at native size;
-                    render_offline(settings, now, message); quantize_grayscale(image, levels)
+                    render_offline(settings, last_attempt_at, message); quantize_grayscale(image, levels)
   service.py        DashboardService (refresh(), frame(orientation), health()),
                     DashboardServer/DashboardHandler (stdlib http.server), serve_forever()
   cli.py            Typer app: `paperwhite render|serve|skins|providers|version`
