@@ -25,7 +25,15 @@ confirmed on the device). Do not move an item to "verified" without evidence.
   specification. Confirm with `eips -i` on the device; the framebuffer geometry it prints
   is the source of truth for `display.width` / `display.height`.
 
-## Jailbreak runbook (verified against the sources on 2026-09-18, not yet executed)
+## Jailbreak runbook (verified against the sources on 2026-09-18; steps 1–4 executed)
+
+**Legal and warranty note.** Jailbreaking modifies the software of a device you own. It
+likely breaches Amazon's Kindle terms of use, voids any remaining warranty, and can brick
+the device if done wrong; whether it is lawful depends on your jurisdiction (in the United
+States, DMCA exemptions have covered unlocking of consumer devices, but this project makes
+no legal claim). This repository documents the procedure and links to the community
+tools; it does **not** redistribute Amazon firmware or the jailbreak binaries. You act on
+your own device at your own risk.
 
 Route selection comes from the KindleModding jailbreak wizard's data file
 (`static/jailbreaks.json` in `KindleModding/kindlemodding.github.io`, read 2026-09-18). For
@@ -48,16 +56,18 @@ cannot download. Reversible by deleting the filler files afterwards.
 
 ### Steps
 
-Done from the Pi (device mounted at `/media/smokingpi/Kindle`):
+Done from the Pi (device mounted at `/media/smokingpi/Kindle`), **executed 2026-09-18**:
 
-1. Fill the USB partition to 50–90 MB free: `fill_disk/` with 500 MB dummy files.
-2. Remove any `*.bin` or `update.bin.tmp.partial` from the USB root (none present on
-   2026-09-18).
-3. Extract `wb2.zip` (WinterBreak2 v1.1.0, SHA-256
+1. Filled the USB partition: `fill_disk/` with seven dummy files (`dd if=/dev/zero`,
+   500 MB each, the last one smaller); free space went from 3.1 GB to **70 MB**
+   (`df -h`).
+2. Checked for `*.bin` or `update.bin.tmp.partial` on the USB root: none present.
+3. Extracted `wb2.zip` (WinterBreak2 v1.1.0, SHA-256
    `9e85970902a1f2af6b4c3243755d80595dd36404b85083f8be8c65a69d04cfdf`) to the USB root,
-   producing `winterbreak2/dialoger.html`. The file asks the device's transfer service to
-   run `curl -L https://kindlemodding.org/jb.sh | sh`; that script is the jailbreak.
-4. Unmount: `udisksctl unmount -b /dev/sda1`.
+   producing `winterbreak2/dialoger.html` (627 bytes; checksum on the device matches the
+   download). The file asks the device's transfer service to run
+   `curl -L https://kindlemodding.org/jb.sh | sh`; that script is the jailbreak.
+4. Unmounted: `udisksctl unmount -b /dev/sda1`.
 
 Done on the device (needs hands; the maintainer):
 

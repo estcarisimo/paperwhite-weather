@@ -24,6 +24,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   `/dashboard/{landscape,portrait}.png` on port 8765. Offline frame before the first fetch.
 - `paperwhite serve` reads `PAPERWHITE_CONFIG`, `PAPERWHITE_PROVIDER`, `PAPERWHITE_HOST`,
   and `PAPERWHITE_PORT` from the environment; `/health` reports the server's `hostname`.
+- `.env.example` documenting those variables and their built-in defaults
+  (`config.yaml` in the working directory, `mock`, `0.0.0.0`, `8765`); the systemd unit
+  loads a git-ignored `.env`, a manual `paperwhite serve` does not.
 - `deploy/`: systemd user unit (configured through those variables and an optional
   `.env`) and Avahi service file; `docs/DEPLOY.md` with the steps
   verified on the Raspberry Pi.
@@ -32,7 +35,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   with dates and evidence.
 - Decision record in `docs/ARCHITECTURE.md`: architecture accepted; landscape default;
   both orientations served; tap to switch orientation; DNS-name discovery on port 8765.
-- Jailbreak runbook for the Paperwhite 3 on 5.16.2.1.1 in `docs/DEVICE.md`.
+- Jailbreak runbook for the Paperwhite 3 on 5.16.2.1.1 in `docs/DEVICE.md`, with a
+  legal and warranty note.
 
 ### Changed
 - Default orientation is now `landscape` (was `portrait`).

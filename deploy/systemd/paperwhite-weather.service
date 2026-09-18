@@ -16,7 +16,7 @@
 # PAPERWHITE_CONFIG (default %REPO%/config.yaml, git-ignored; copy config.example.yaml),
 # PAPERWHITE_PROVIDER (default mock), PAPERWHITE_HOST (default 0.0.0.0), PAPERWHITE_PORT
 # (default 8765). Override any of them with `systemctl --user edit paperwhite-weather.service`
-# or in %REPO%/.env (git-ignored, one KEY=value per line).
+# or in %REPO%/.env (git-ignored; start from .env.example).
 
 [Unit]
 Description=Paperwhite Weather dashboard service

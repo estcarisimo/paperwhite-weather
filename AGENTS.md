@@ -96,7 +96,9 @@ uv build                                    # sdist + wheel via uv_build
   change. Version lives only in `pyproject.toml` (and `CITATION.cff` at release time).
 - Do not edit `uv.lock` by hand; run `uv lock` / `uv add`. CI uses `uv sync --locked`.
 - Never commit a real location, credentials, or rendered PNGs (`.gitignore` covers
-  `config.yaml` and `*.png`; reference screenshots go in `docs/img/` deliberately).
+  `config.yaml`, `.env`, and `*.png`; reference screenshots go in `docs/img/` deliberately).
+  `config.example.yaml` and `.env.example` are the committed templates; a new setting is
+  added to the matching template in the same PR.
 - Documented commands are run before they are written down. Kindle-side commands that
   have not been run on the device are labeled **draft** in `docs/DEVICE.md`.
 

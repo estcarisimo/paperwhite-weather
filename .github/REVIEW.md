@@ -65,6 +65,9 @@ Do not comment on style the formatter already enforces. Do not pad the review.
 - Read-only with respect to the branch: do not commit, push, or edit files outside your
   worktree experiments. Remove the worktree when done (`git worktree remove --force`).
 - Do not post to GitHub.
+- The machine you run on may host the real service (a systemd unit on port 8765). Start
+  your own test server on a port above 28000 and stop it **by PID** (`kill $PID`), never
+  with `pkill -f paperwhite`, which also kills the real one. Do not touch systemd units.
 
 ## Output (the final message, nothing else)
 

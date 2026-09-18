@@ -33,9 +33,10 @@ The unit passes settings as environment variables, so it never needs editing:
 | `PAPERWHITE_HOST` | `0.0.0.0` | Interface to listen on |
 | `PAPERWHITE_PORT` | `8765` | TCP port |
 
-Override any of them in `<repo>/.env` (git-ignored, `KEY=value` lines) or with
-`systemctl --user edit paperwhite-weather.service`. The same variables work for a manual
-`paperwhite serve`.
+Override any of them in `<repo>/.env` (git-ignored; `cp .env.example .env` and edit) or
+with `systemctl --user edit paperwhite-weather.service`. The same variables work for a
+manual `paperwhite serve`; note that the shell does not read `.env` by itself, only the
+unit does (`EnvironmentFile`).
 
 ## Install
 
@@ -43,6 +44,7 @@ Override any of them in `<repo>/.env` (git-ignored, `KEY=value` lines) or with
 cd ~/paperwhite-weather
 uv sync
 cp config.example.yaml config.yaml         # then edit coordinates, time zone, units
+cp .env.example .env                       # optional: provider, host, port
 mkdir -p ~/.config/systemd/user
 sed "s|%REPO%|$PWD|g" deploy/systemd/paperwhite-weather.service \
     > ~/.config/systemd/user/paperwhite-weather.service
