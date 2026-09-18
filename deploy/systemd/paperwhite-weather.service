@@ -12,8 +12,11 @@
 #   systemctl --user status paperwhite-weather.service
 #   journalctl --user -u paperwhite-weather.service -f
 #
-# The service reads %REPO%/config.yaml (git-ignored; copy config.example.yaml and edit).
-# Change --provider once a live provider exists.
+# Settings are environment variables so the unit itself never needs editing:
+# PAPERWHITE_CONFIG (default %REPO%/config.yaml, git-ignored; copy config.example.yaml),
+# PAPERWHITE_PROVIDER (default mock), PAPERWHITE_HOST (default 0.0.0.0), PAPERWHITE_PORT
+# (default 8765). Override any of them with `systemctl --user edit paperwhite-weather.service`
+# or in %REPO%/.env (git-ignored, one KEY=value per line).
 
 [Unit]
 Description=Paperwhite Weather dashboard service
@@ -23,7 +26,10 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%REPO%
-ExecStart=%REPO%/.venv/bin/paperwhite serve --config %REPO%/config.yaml --provider mock --host 0.0.0.0 --port 8765
+Environment=PAPERWHITE_CONFIG=%REPO%/config.yaml
+Environment=PAPERWHITE_PROVIDER=mock
+EnvironmentFile=-%REPO%/.env
+ExecStart=%REPO%/.venv/bin/paperwhite serve
 Restart=on-failure
 RestartSec=10
 # Hardening that still allows reading the checkout and writing nothing.

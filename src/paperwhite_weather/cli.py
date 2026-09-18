@@ -75,12 +75,25 @@ def render(
 
 @app.command()
 def serve(
-    config: Path = typer.Option(..., "--config", "-c", exists=True, dir_okay=False),
-    provider: str = typer.Option("mock", "--provider", "-p", help="Weather provider name."),
-    host: str = typer.Option(DEFAULT_HOST, "--host", help="Interface to listen on."),
-    port: int = typer.Option(DEFAULT_PORT, "--port", help="TCP port to listen on."),
+    config: Path = typer.Option(
+        ..., "--config", "-c", exists=True, dir_okay=False, envvar="PAPERWHITE_CONFIG"
+    ),
+    provider: str = typer.Option(
+        "mock", "--provider", "-p", help="Weather provider name.", envvar="PAPERWHITE_PROVIDER"
+    ),
+    host: str = typer.Option(
+        DEFAULT_HOST, "--host", help="Interface to listen on.", envvar="PAPERWHITE_HOST"
+    ),
+    port: int = typer.Option(
+        DEFAULT_PORT, "--port", help="TCP port to listen on.", envvar="PAPERWHITE_PORT"
+    ),
 ) -> None:
-    """Fetch weather on a schedule and serve dashboard frames over HTTP on the LAN."""
+    """Fetch weather on a schedule and serve dashboard frames over HTTP on the LAN.
+
+    Every option can also come from the environment (``PAPERWHITE_CONFIG``,
+    ``PAPERWHITE_PROVIDER``, ``PAPERWHITE_HOST``, ``PAPERWHITE_PORT``), which is how the
+    systemd unit configures it.
+    """
     settings = load_settings(config)
     serve_forever(settings, get_provider(provider), host=host, port=port)
 

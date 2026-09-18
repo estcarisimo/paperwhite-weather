@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import socket
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -143,6 +144,7 @@ class DashboardService:
             return {
                 "service": SERVICE_NAME,
                 "version": __version__,
+                "hostname": socket.gethostname(),
                 "status": "ok" if state.snapshot is not None else "no-data",
                 "provider": self.provider.name,
                 "skin": self.settings.display.skin,

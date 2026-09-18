@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from PIL import Image
 from typer.testing import CliRunner
 
@@ -79,3 +80,24 @@ def test_render_orientation_override(tmp_path: Path) -> None:
     )
     assert result.exit_code != 0
     assert "orientation" in str(result.exception)
+
+
+def test_serve_reads_settings_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The systemd unit configures `serve` through PAPERWHITE_* variables."""
+    captured: dict[str, object] = {}
+
+    def fake_serve_forever(settings: object, provider: object, host: str, port: int) -> None:
+        captured.update(settings=settings, provider=provider, host=host, port=port)
+
+    monkeypatch.setattr("paperwhite_weather.cli.serve_forever", fake_serve_forever)
+    monkeypatch.setenv("PAPERWHITE_CONFIG", str(EXAMPLE_CONFIG))
+    monkeypatch.setenv("PAPERWHITE_PROVIDER", "mock")
+    monkeypatch.setenv("PAPERWHITE_HOST", "127.0.0.1")
+    monkeypatch.setenv("PAPERWHITE_PORT", "28765")
+    result = runner.invoke(app, ["serve"])
+    assert result.exit_code == 0, result.output
+    assert captured["host"] == "127.0.0.1" and captured["port"] == 28765
+    assert getattr(captured["provider"], "name", None) == "mock"
+
+    result = runner.invoke(app, ["serve", "--port", "28766"])
+    assert result.exit_code == 0 and captured["port"] == 28766, "flags override the environment"

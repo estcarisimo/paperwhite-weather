@@ -109,7 +109,7 @@ register at the device node; other dashboards stop the framework and paint over 
 | Tool | Expected | Use |
 | --- | --- | --- |
 | `eips` | present in stock firmware | `eips -c` clears the panel; `eips -g file.png` paints an image; `eips -i` prints panel info |
-| `wget` | BusyBox applet | Download the PNG from `http://smokingpi.lan:8765/` (plain HTTP on the LAN; HTTPS support on the device is uncertain) |
+| `wget` | BusyBox applet | Download the PNG from `http://<server>.lan:8765/` (plain HTTP on the LAN; HTTPS support on the device is uncertain) |
 | `lipc-set-prop` / `lipc-get-prop` | present | Toggle Wi-Fi, prevent screensaver, read battery |
 | `rtcwake` or `/sys/class/rtc/rtc*/wakealarm` | one of them | Wake from suspend on a timer |
 | `powerd` | present | Must be told not to blank the screen or suspend on its own |
