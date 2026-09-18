@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+.ipynb_checkpoints/
+
+# Local configuration and rendered output (never commit your location or dashboards)
+config.yaml
+config.*.yaml
+!config.example.yaml
+*.png
+!docs/img/*.png
+.env
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/

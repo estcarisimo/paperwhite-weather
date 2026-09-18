@@ -1,0 +1,12 @@
+## Summary
+
+<!-- What does this PR change and why? Link the issue if there is one. -->
+
+## Checklist
+
+- [ ] CI is green (lint, tests on all Python versions, build)
+- [ ] Independent review (`.github/REVIEW.md`, fresh session) returned `APPROVE` on the latest push; every earlier finding fixed or rebutted with evidence. **Required before merge.**
+- [ ] Tests added or updated for behavior changes
+- [ ] Docs updated (`README.md`, `docs/`) when user-facing behavior changed
+- [ ] `CHANGELOG.md` has an entry under `[Unreleased]`
+- [ ] No real location, credentials, or rendered dashboards committed

@@ -1,0 +1,18 @@
+# Copy to config.yaml (git-ignored) and edit. Never commit your real location.
+location:
+  name: Chicago            # optional label shown by some skins
+  latitude: 41.8781        # example: downtown Chicago
+  longitude: -87.6298
+  timezone: America/Chicago
+
+units:
+  temperature: fahrenheit  # celsius | fahrenheit
+  wind: mph                # kmh | mph | ms
+
+display:
+  skin: minimal            # see `paperwhite skins`
+  orientation: portrait    # portrait | landscape
+  width: 1072              # Kindle Paperwhite 3 native framebuffer
+  height: 1448
+  time_format: 12h         # 12h | 24h
+  refresh_minutes: 15

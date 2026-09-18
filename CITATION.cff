@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you build on this project, please cite it as below."
+type: software
+title: "Paperwhite Weather: an e-ink weather dashboard for repurposed Kindles"
+authors:
+  - family-names: Carisimo
+    given-names: Esteban
+repository-code: https://github.com/estcarisimo/paperwhite-weather
+license: MIT
+version: 0.1.0
+date-released: "2026-09-18"
+keywords:
+  - kindle
+  - e-ink
+  - weather
+  - dashboard

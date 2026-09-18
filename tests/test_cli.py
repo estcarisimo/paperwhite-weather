@@ -1,0 +1,64 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from PIL import Image
+from typer.testing import CliRunner
+
+from paperwhite_weather import __version__
+from paperwhite_weather.cli import app
+from tests.conftest import EXAMPLE_CONFIG
+
+runner = CliRunner()
+
+
+def test_version() -> None:
+    result = runner.invoke(app, ["version"])
+    assert result.exit_code == 0
+    assert result.output.strip() == f"paperwhite-weather {__version__}"
+
+
+def test_lists() -> None:
+    assert runner.invoke(app, ["skins"]).output.split() == ["minimal"]
+    assert runner.invoke(app, ["providers"]).output.split() == ["mock"]
+
+
+def test_render_writes_native_size_png(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "dashboard.png"
+    result = runner.invoke(
+        app,
+        [
+            "render",
+            "--config",
+            str(EXAMPLE_CONFIG),
+            "--output",
+            str(output),
+            "--now",
+            "2026-09-18T21:45:00+00:00",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Rendered skin 'minimal' (portrait, 1072x1448)" in result.output
+    assert "fetched at 2026-09-18 21:45 UTC" in result.output  # mock honors --now
+    with Image.open(output) as image:
+        assert image.format == "PNG"
+        assert image.size == (1072, 1448)
+        assert image.mode == "L"
+
+
+def test_render_skin_override_reports_unknown_skin(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["render", "-c", str(EXAMPLE_CONFIG), "-o", str(tmp_path / "x.png"), "--skin", "nope"],
+    )
+    assert result.exit_code != 0
+    assert isinstance(result.exception, ValueError)
+    assert "available: minimal" in str(result.exception)
+
+
+def test_render_unknown_provider_fails(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app, ["render", "-c", str(EXAMPLE_CONFIG), "-o", str(tmp_path / "x.png"), "-p", "nope"]
+    )
+    assert result.exit_code != 0
+    assert "available: mock" in str(result.exception)
