@@ -31,6 +31,9 @@ logger = logging.getLogger(__name__)
 
 #: Default TCP port. 8080 is commonly taken on home servers; 8765 is not registered.
 DEFAULT_PORT = 8765
+#: The service exists to be reached by the Kindle over the LAN, so it listens on every
+#: interface by default; `--host` narrows it. Deliberate, hence the bandit exemption.
+DEFAULT_HOST = "0.0.0.0"  # nosec B104
 #: Value of ``service`` in ``/health``; clients use it to recognize this server on the LAN.
 SERVICE_NAME = "paperwhite-weather"
 
@@ -233,7 +236,7 @@ class DashboardServer(ThreadingHTTPServer):
 def serve_forever(
     settings: Settings,
     provider: WeatherProvider,
-    host: str = "0.0.0.0",  # noqa: S104 - a LAN service is meant to listen on all interfaces
+    host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
 ) -> None:
     """Start the refresh loop and serve until interrupted (``KeyboardInterrupt``)."""

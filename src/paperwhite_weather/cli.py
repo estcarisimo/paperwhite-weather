@@ -12,7 +12,7 @@ from paperwhite_weather import __version__
 from paperwhite_weather.config import load_settings
 from paperwhite_weather.providers import MockProvider, available_providers, get_provider
 from paperwhite_weather.render import render_dashboard
-from paperwhite_weather.service import DEFAULT_PORT, serve_forever
+from paperwhite_weather.service import DEFAULT_HOST, DEFAULT_PORT, serve_forever
 from paperwhite_weather.skins import available_skins
 
 app = typer.Typer(
@@ -77,7 +77,7 @@ def render(
 def serve(
     config: Path = typer.Option(..., "--config", "-c", exists=True, dir_okay=False),
     provider: str = typer.Option("mock", "--provider", "-p", help="Weather provider name."),
-    host: str = typer.Option("0.0.0.0", "--host", help="Interface to listen on."),
+    host: str = typer.Option(DEFAULT_HOST, "--host", help="Interface to listen on."),
     port: int = typer.Option(DEFAULT_PORT, "--port", help="TCP port to listen on."),
 ) -> None:
     """Fetch weather on a schedule and serve dashboard frames over HTTP on the LAN."""
