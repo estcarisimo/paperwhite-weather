@@ -18,3 +18,5 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   supports portrait and landscape, and quantizes to 16 gray levels.
 - `paperwhite` CLI: `render`, `skins`, `providers`, `version`.
 - Design docs: `docs/ARCHITECTURE.md`, `docs/DEVICE.md`, `docs/ROADMAP.md`.
+- `docs/REPOSITORY_STATE.md`: verified repository settings (ruleset, security features, CI)
+  with dates and evidence.
