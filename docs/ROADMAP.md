@@ -60,7 +60,7 @@ Goal: real data, refreshed automatically, served on the LAN.
       and the `/health` identity on port 8765; systemd unit and Avahi service file for the
       Raspberry Pi (installed on `smokingpi` 2026-09-18 with the mock provider).
 - [ ] Switch the installed unit to the live provider once it exists.
-- [ ] Offline frame when no snapshot has ever succeeded; "Updated" footer already covers
+- [x] Offline frame when no snapshot has ever succeeded; "Updated" footer already covers
       stale data.
 
 Done when: the Pi serves a live frame that updates on schedule and survives an API outage.
