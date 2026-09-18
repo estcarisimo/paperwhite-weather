@@ -12,7 +12,7 @@ from paperwhite_weather import __version__
 from paperwhite_weather.config import load_settings
 from paperwhite_weather.providers import MockProvider, available_providers, get_provider
 from paperwhite_weather.render import render_dashboard
-from paperwhite_weather.service import DEFAULT_HOST, DEFAULT_PORT, serve_forever
+from paperwhite_weather.service import DEFAULT_CONFIG, DEFAULT_HOST, DEFAULT_PORT, serve_forever
 from paperwhite_weather.skins import available_skins
 
 app = typer.Typer(
@@ -76,7 +76,13 @@ def render(
 @app.command()
 def serve(
     config: Path = typer.Option(
-        ..., "--config", "-c", exists=True, dir_okay=False, envvar="PAPERWHITE_CONFIG"
+        DEFAULT_CONFIG,
+        "--config",
+        "-c",
+        exists=True,
+        dir_okay=False,
+        envvar="PAPERWHITE_CONFIG",
+        help="Configuration file (default: config.yaml in the working directory).",
     ),
     provider: str = typer.Option(
         "mock", "--provider", "-p", help="Weather provider name.", envvar="PAPERWHITE_PROVIDER"

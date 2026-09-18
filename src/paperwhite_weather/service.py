@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
+from pathlib import Path
 from typing import Literal
 
 from PIL import Image
@@ -32,6 +33,8 @@ logger = logging.getLogger(__name__)
 
 #: Default TCP port. 8080 is commonly taken on home servers; 8765 is not registered.
 DEFAULT_PORT = 8765
+#: Default configuration file for `paperwhite serve`, relative to the working directory.
+DEFAULT_CONFIG = Path("config.yaml")
 #: The service exists to be reached by the Kindle over the LAN, so it listens on every
 #: interface by default; `--host` narrows it. Deliberate, hence the bandit exemption.
 DEFAULT_HOST = "0.0.0.0"  # nosec B104
