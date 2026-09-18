@@ -1,0 +1,37 @@
+# User-level systemd unit for the dashboard service on the Raspberry Pi.
+#
+# Install (as the user that owns the checkout; lingering must be enabled so the service
+# starts at boot without a login: `loginctl show-user $USER -p Linger` must say `yes`,
+# otherwise `sudo loginctl enable-linger $USER`):
+#
+#   mkdir -p ~/.config/systemd/user
+#   sed "s|%REPO%|$PWD|g" deploy/systemd/paperwhite-weather.service \
+#       > ~/.config/systemd/user/paperwhite-weather.service
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now paperwhite-weather.service
+#   systemctl --user status paperwhite-weather.service
+#   journalctl --user -u paperwhite-weather.service -f
+#
+# The service reads %REPO%/config.yaml (git-ignored; copy config.example.yaml and edit).
+# Change --provider once a live provider exists.
+
+[Unit]
+Description=Paperwhite Weather dashboard service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%REPO%
+ExecStart=%REPO%/.venv/bin/paperwhite serve --config %REPO%/config.yaml --provider mock --host 0.0.0.0 --port 8765
+Restart=on-failure
+RestartSec=10
+# Hardening that still allows reading the checkout and writing nothing.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=%REPO%
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,19 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!--
+  Advertise the dashboard service over mDNS/DNS-SD for clients that can browse it
+  (laptops, phones, tooling). The Kindle client does not rely on this; it uses the
+  router's DNS name of the Pi first (see docs/ARCHITECTURE.md, Discovery).
+
+  Install:  sudo cp deploy/avahi/paperwhite-weather.service /etc/avahi/services/
+  Check:    avahi-browse -rt _paperwhite-weather._tcp
+-->
+<service-group>
+  <name replace-wildcards="yes">Paperwhite Weather on %h</name>
+  <service>
+    <type>_paperwhite-weather._tcp</type>
+    <port>8765</port>
+    <txt-record>path=/dashboard.png</txt-record>
+    <txt-record>health=/health</txt-record>
+  </service>
+</service-group>

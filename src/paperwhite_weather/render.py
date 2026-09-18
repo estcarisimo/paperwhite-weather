@@ -5,11 +5,13 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from paperwhite_weather.config import Settings
+from paperwhite_weather.fonts import load_font
 from paperwhite_weather.models import WeatherSnapshot, require_aware
 from paperwhite_weather.skins import get_skin
+from paperwhite_weather.skins.base import BLACK, DARK_GRAY, WHITE, format_clock
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +84,53 @@ def render_dashboard(
         )
     if image.mode != "L":
         image = image.convert("L")
+    if display.orientation == "landscape":
+        image = image.rotate(90, expand=True)
+    return quantize_grayscale(image)
+
+
+def render_offline(
+    settings: Settings, last_attempt_at: datetime | None, message: str
+) -> Image.Image:
+    """Render a frame that says there is no weather data, at the display's native size.
+
+    Used by the service before the first successful fetch, so the device never shows a
+    blank screen or a frame that pretends to be current.
+
+    Parameters
+    ----------
+    settings
+        User configuration; selects size, orientation, and time format.
+    last_attempt_at
+        When the service last tried to fetch weather (timezone-aware), or ``None`` if it
+        has not tried yet. Shown on the frame so a long outage is visible as such.
+    message
+        Headline, for example ``"No weather data yet"``.
+    """
+    display = settings.display
+    width, height = display.canvas_size
+    image = Image.new("L", (width, height), WHITE)
+    draw = ImageDraw.Draw(image)
+    scale = min(width, height) / 1072
+    if last_attempt_at is None:
+        detail = "No fetch attempted yet"
+    else:
+        local = require_aware(last_attempt_at).astimezone(settings.location.tzinfo)
+        detail = f"Last attempt {local:%a} {format_clock(local, display.time_format)}"
+    draw.text(
+        (width / 2, height * 0.42),
+        message,
+        font=load_font("bold", max(1, round(64 * scale))),
+        fill=BLACK,
+        anchor="mm",
+    )
+    draw.text(
+        (width / 2, height * 0.42 + round(90 * scale)),
+        detail,
+        font=load_font("regular", max(1, round(36 * scale))),
+        fill=DARK_GRAY,
+        anchor="mm",
+    )
     if display.orientation == "landscape":
         image = image.rotate(90, expand=True)
     return quantize_grayscale(image)

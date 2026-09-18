@@ -38,11 +38,14 @@ src/paperwhite_weather/
   skins/            base.py (Skin protocol, format helpers, CONDITION_LABELS),
                     minimal.py; registry in __init__.py: get_skin(name), available_skins()
   render.py         render_dashboard(snapshot, settings, now) -> "L" image at native size;
-                    quantize_grayscale(image, levels)
-  cli.py            Typer app: `paperwhite render|skins|providers|version`
+                    render_offline(settings, last_attempt_at, message); quantize_grayscale(image, levels)
+  service.py        DashboardService (refresh(), frame(orientation), health()),
+                    DashboardServer/DashboardHandler (stdlib http.server), serve_forever()
+  cli.py            Typer app: `paperwhite render|serve|skins|providers|version`
 tests/              pytest; conftest.py has the example-config and fixed-snapshot fixtures
+deploy/             systemd user unit and Avahi service file for the Raspberry Pi
 kindle/             device-side shell scripts (Sprint 3; empty until then)
-docs/               ARCHITECTURE.md, DEVICE.md, ROADMAP.md, REPOSITORY_STATE.md
+docs/               ARCHITECTURE.md, DEVICE.md, DEPLOY.md, ROADMAP.md, REPOSITORY_STATE.md
 config.example.yaml Example configuration; real config.yaml is git-ignored
 ```
 
@@ -57,6 +60,7 @@ uv run mypy src/paperwhite_weather          # blocking in CI (disallow_untyped_d
 uv run pytest --cov=paperwhite_weather      # CI enforces --cov-fail-under=85
 uv run paperwhite render --config config.example.yaml --output /tmp/dashboard.png
 uv run paperwhite render -c config.example.yaml -o /tmp/d.png --now 2026-09-18T21:45:00+00:00
+uv run paperwhite serve -c config.example.yaml --host 127.0.0.1 --port 18765   # then GET /health
 uv build                                    # sdist + wheel via uv_build
 ```
 
@@ -75,7 +79,13 @@ uv build                                    # sdist + wheel via uv_build
   `render.py` rotates landscape canvases and quantizes to 16 gray levels. Skins never
   load fonts from the host; use `fonts.load_font`.
 - Providers raise on any failure; no partial snapshots, no silent fallbacks. Caching the
-  last good snapshot belongs to the (future) service layer, not to providers.
+  last good snapshot is `service.py`'s job, not the providers'.
+- The service renders on request (clock = request time) and memoizes per minute; it never
+  stores rendered files on disk. HTTP is stdlib `http.server`; do not add a web framework
+  for four routes.
+- The service on `smokingpi` is a user-level systemd unit (`docs/DEPLOY.md`). After
+  merging a change that affects it: `git pull && uv sync && systemctl --user restart
+  paperwhite-weather.service`.
 - Tests: plain functions, fixtures, `parametrize`. Markers `math` / `behaviour` as
   defined in `pyproject.toml`; `--strict-markers` is on. `tests/test_<module>.py`
   mirrors `src/`.

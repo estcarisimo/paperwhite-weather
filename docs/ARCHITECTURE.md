@@ -23,7 +23,7 @@ flowchart LR
 | Data model | server | `WeatherSnapshot`: current conditions, daily forecast, sun times, UTC `fetched_at` |
 | Skin | server | Draw one frame on a canvas of a given size; several skins share the same data |
 | Renderer | server | Pick the skin, handle orientation, quantize to the panel's gray levels |
-| Service (Sprint 2) | server | Refresh on a schedule, cache the last good snapshot, serve the PNG over HTTP |
+| Service (`service.py`) | server | Refresh on a schedule, cache the last good snapshot, render frames on request, serve them over HTTP |
 | Kindle client (Sprint 3) | Kindle | Wake, join Wi-Fi, download the PNG, write it with `eips`, sleep; a tap switches orientation |
 
 The server is the maintainer's Raspberry Pi 5 (`smokingpi`), which is always on and

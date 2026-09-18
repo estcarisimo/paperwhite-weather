@@ -19,6 +19,7 @@ displays it.
 - 🔌 **Pluggable providers**: a deterministic `mock` provider today; Open-Meteo next
 - 🕒 **Honest timestamps**: every frame shows when its data was fetched, so stale data is obvious
 - 🧪 **Testable without a Kindle**: the renderer runs anywhere Python runs; CI uploads the rendered frame
+- 📡 **LAN service**: `paperwhite serve` publishes `/dashboard/{landscape,portrait}.png` and a `/health` identity on port 8765; a failed fetch keeps the last good frame
 - 🔒 **Your location stays local**: configuration is git-ignored and never leaves your network except to the weather provider you choose
 
 ## 🚀 Quick Start
@@ -46,6 +47,10 @@ uv run paperwhite render -c config.example.yaml -o dashboard.png --now 2026-09-1
 # Try a skin or the other orientation without editing the config
 uv run paperwhite render -c config.example.yaml -o dashboard.png --skin minimal
 uv run paperwhite render -c config.example.yaml -o dashboard.png --orientation portrait
+
+# Serve frames on the LAN (fetches on a schedule, renders on request)
+uv run paperwhite serve --config config.yaml --port 8765
+curl -s http://localhost:8765/health
 
 # What is available
 uv run paperwhite skins
@@ -93,9 +98,15 @@ src/paperwhite_weather/
 ├── fonts.py           # bundled DejaVu Sans (Bitstream Vera license)
 ├── providers/         # WeatherProvider protocol, mock provider, registry
 ├── skins/             # Skin protocol, format helpers, minimal skin, registry
-├── render.py          # render_dashboard(): compose, rotate, quantize to 16 grays
-└── cli.py             # `paperwhite render | skins | providers | version`
+├── render.py          # render_dashboard(): compose, rotate, quantize to 16 grays; render_offline()
+├── service.py         # DashboardService (cache + per-minute frames) and the HTTP server
+└── cli.py             # `paperwhite render | serve | skins | providers | version`
+deploy/
+├── systemd/           # user-level unit for the Raspberry Pi
+└── avahi/             # optional mDNS advertisement
 ```
+
+Deployment on the Pi is documented in [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## 🧪 Development
 
