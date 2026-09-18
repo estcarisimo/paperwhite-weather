@@ -106,6 +106,11 @@ def render_offline(
         has not tried yet. Shown on the frame so a long outage is visible as such.
     message
         Headline, for example ``"No weather data yet"``.
+
+    Raises
+    ------
+    ValueError
+        If ``last_attempt_at`` is naive.
     """
     display = settings.display
     width, height = display.canvas_size

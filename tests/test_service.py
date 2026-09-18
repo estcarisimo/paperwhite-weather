@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import socket
 import threading
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
@@ -203,6 +204,7 @@ def test_http_health(server: str) -> None:
     assert headers["Cache-Control"] == "no-store"
     document = json.loads(body)
     assert document["service"] == SERVICE_NAME
+    assert document["hostname"] == socket.gethostname()
     assert document["orientations"] == ["landscape", "portrait"]
     assert document["default_orientation"] == "landscape"
 

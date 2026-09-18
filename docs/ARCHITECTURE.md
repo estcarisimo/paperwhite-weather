@@ -26,8 +26,9 @@ flowchart LR
 | Service (`service.py`) | server | Refresh on a schedule, cache the last good snapshot, render frames on request, serve them over HTTP |
 | Kindle client (Sprint 3) | Kindle | Wake, join Wi-Fi, download the PNG, write it with `eips`, sleep; a tap switches orientation |
 
-The server is the maintainer's Raspberry Pi 5 (`smokingpi`), which is always on and
-already hosts other LAN services. Any always-on machine on the same network works.
+The server is any always-on machine on the same network. The reference deployment is the
+maintainer's Raspberry Pi 5, which already hosts other LAN services; nothing in the design
+depends on that machine's name.
 
 ## Decisions (2026-09-18)
 
@@ -37,7 +38,7 @@ already hosts other LAN services. Any always-on machine on the same network work
 | Server | Raspberry Pi on the LAN, plain HTTP | HTTPS on the Kindle's BusyBox `wget` is unreliable; the LAN is the trust boundary |
 | Orientation | **Both** rendered on every refresh; **landscape is the default** | The maintainer expects to use it mostly in landscape |
 | Switching orientation | A **tap on the screen** toggles between landscape and portrait on the device | The Paperwhite 3 has no accelerometer and no buttons besides power; touch is the only input. Design below, validated in Sprint 1 |
-| Discovery | DNS name of the Pi (`smokingpi.lan`) with fallbacks | Design and evidence below |
+| Discovery | DNS name of the server (`<server>.lan`), configured on the client, with fallbacks | Design and evidence below |
 | Skins | Last (Sprint 4), and where most refinement time goes | `minimal` is enough to bring the device up |
 | Languages | Python on the server, POSIX shell on the Kindle | See "Language choice" |
 
@@ -74,21 +75,28 @@ Verified on this network on 2026-09-18 from the Pi:
 | The Pi runs Avahi (mDNS) as well | `systemctl is-active avahi-daemon` → `active` |
 | Port `8080` is taken on the Pi by another service | `ss -ltn`; Docker publishes `8080`, `3000`, `8086`, `80` |
 
-Because the Kindle gets its DNS server from the same router, `http://smokingpi.lan:8765/`
-resolves on the device with no mDNS support needed. The service listens on **port 8765**.
+Because the Kindle gets its DNS server from the same router, `http://<server>.lan:8765/`
+resolves on the device with no mDNS support needed, where `<server>` is whatever the
+server machine's hostname is (`smokingpi` in the reference deployment, verified above). The
+service listens on **port 8765** by default (`PAPERWHITE_PORT` or `--port` to change).
 
-The client resolves the server in this order and stops at the first `/health` that answers
-with the expected identity:
+The server's name is **client configuration**, never a constant in code or a default in
+the design. The Kindle client reads `SERVER_HOST` (and optionally `SERVER_PORT`) from its
+config file, written by the install script from the value the person supplies; the
+environment variable `PAPERWHITE_SERVER` overrides it for one run. Resolution order, stopping
+at the first `/health` that answers with the expected identity:
 
-1. `SERVER_URL` from the client's config file, if set.
-2. `http://<server-hostname>.lan:8765` (default hostname `smokingpi`).
-3. `http://<server-hostname>.local:8765` (works only where the resolver does mDNS).
+1. `SERVER_URL` from the client's config file, if set (any URL, no discovery).
+2. `http://$SERVER_HOST.lan:$SERVER_PORT`.
+3. `http://$SERVER_HOST.local:$SERVER_PORT` (works only where the resolver does mDNS).
 4. A scan of the default gateway's `/24` for `/health` with a one-second timeout per
-   host, in parallel batches. Slow (tens of seconds) but needs no configuration.
+   host, in parallel batches. Slow (tens of seconds) but needs no configuration at all,
+   so a client with no `SERVER_HOST` still finds the server.
 
-`/health` returns `{"service": "paperwhite-weather", "version": "...", "rendered_at": "...",
-"orientations": ["landscape", "portrait"]}` so the scan can tell this service from any
-other web server on the LAN. The Pi also advertises `_paperwhite-weather._tcp` through
+`/health` returns `{"service": "paperwhite-weather", "version": "...", "hostname": "...",
+"fetched_at": "...", "orientations": ["landscape", "portrait"], ...}` so the scan can tell
+this service from any other web server on the LAN, and a client that found the server by
+scanning learns its hostname for next time. The Pi also advertises `_paperwhite-weather._tcp` through
 Avahi for clients that can browse mDNS; the Kindle probably cannot, so this is for tooling.
 
 A DHCP reservation for the Pi on the router is recommended but not required: the name

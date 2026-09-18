@@ -83,9 +83,12 @@ uv build                                    # sdist + wheel via uv_build
 - The service renders on request (clock = request time) and memoizes per minute; it never
   stores rendered files on disk. HTTP is stdlib `http.server`; do not add a web framework
   for four routes.
-- The service on `smokingpi` is a user-level systemd unit (`docs/DEPLOY.md`). After
-  merging a change that affects it: `git pull && uv sync && systemctl --user restart
-  paperwhite-weather.service`.
+- The server's hostname is never a constant or a default: clients configure it, `/health`
+  reports it, and docs write `<server>`. The maintainer's Pi (`smokingpi`) appears only
+  where a verified result is quoted.
+- On the maintainer's Pi the service is a user-level systemd unit (`docs/DEPLOY.md`),
+  configured through `PAPERWHITE_*` environment variables. After merging a change that
+  affects it: `git pull && uv sync && systemctl --user restart paperwhite-weather.service`.
 - Tests: plain functions, fixtures, `parametrize`. Markers `math` / `behaviour` as
   defined in `pyproject.toml`; `--strict-markers` is on. `tests/test_<module>.py`
   mirrors `src/`.

@@ -1,7 +1,8 @@
 # Deploying the service on the Raspberry Pi
 
-Verified on `smokingpi` (Raspberry Pi 5, Raspberry Pi OS, user `smokingpi`) on 2026-09-18.
-Every command below was run there before it was written down.
+Verified on the maintainer's Raspberry Pi 5 (Raspberry Pi OS; hostname `smokingpi`, used
+below only where an actual result is quoted) on 2026-09-18. Every command below was run
+there before it was written down. Replace `<server>` with your machine's hostname.
 
 ## What runs
 
@@ -20,6 +21,21 @@ minute. Until the first successful fetch the frames say "No weather data yet" wi
 of the last fetch attempt (or "No fetch attempted yet"), not the request time, so a long
 outage looks like one. A failed refresh keeps the previous snapshot and is reported in
 `/health` as `last_error`.
+
+## Configuration
+
+The unit passes settings as environment variables, so it never needs editing:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PAPERWHITE_CONFIG` | `<repo>/config.yaml` | Configuration file (git-ignored) |
+| `PAPERWHITE_PROVIDER` | `mock` | Weather provider name (`paperwhite providers`) |
+| `PAPERWHITE_HOST` | `0.0.0.0` | Interface to listen on |
+| `PAPERWHITE_PORT` | `8765` | TCP port |
+
+Override any of them in `<repo>/.env` (git-ignored, `KEY=value` lines) or with
+`systemctl --user edit paperwhite-weather.service`. The same variables work for a manual
+`paperwhite serve`.
 
 ## Install
 
@@ -43,17 +59,18 @@ Port 8765 must be free (`ss -ltn | grep 8765`).
 ```bash
 systemctl --user status paperwhite-weather.service
 journalctl --user -u paperwhite-weather.service -f
-curl -s http://smokingpi.lan:8765/health | python3 -m json.tool
-curl -s -o /tmp/dashboard.png http://smokingpi.lan:8765/dashboard.png
+curl -s http://<server>.lan:8765/health | python3 -m json.tool
+curl -s -o /tmp/dashboard.png http://<server>.lan:8765/dashboard.png
 ```
 
 On 2026-09-18 the service answered on `http://smokingpi.lan:8765/` from the Pi itself
-(`getent hosts smokingpi.lan` → `192.168.86.27`, resolved by the router). Checking the
-same URL from the Kindle is a Sprint 1 task.
+(`getent hosts smokingpi.lan` → `192.168.86.27`, resolved by the router). Whether your
+router resolves `<hostname>.lan` is router-specific; `/health` reports the server's
+`hostname`, and the Kindle client falls back to a subnet scan (see `docs/ARCHITECTURE.md`).
+Checking the URL from the Kindle is a Sprint 1 task.
 
-The unit runs the mock provider until a live provider exists; change `--provider` in the
-installed unit (or in `deploy/systemd/paperwhite-weather.service` and reinstall) when it
-does.
+The unit runs the mock provider until a live provider exists; set
+`PAPERWHITE_PROVIDER` in `.env` when it does.
 
 ## Optional: mDNS advertisement
 
@@ -61,7 +78,7 @@ does.
 sudo cp deploy/avahi/paperwhite-weather.service /etc/avahi/services/
 ```
 
-Installed on `smokingpi` on 2026-09-18. **Unverified**: `avahi-utils` is not installed
+Installed on the maintainer's Pi on 2026-09-18. **Unverified**: `avahi-utils` is not installed
 there, so `avahi-browse -rt _paperwhite-weather._tcp` could not be run. The Kindle client
 does not depend on it.
 

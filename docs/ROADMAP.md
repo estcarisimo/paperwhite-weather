@@ -34,7 +34,7 @@ Goal: shell access to the Kindle and a static image on its screen.
       versions in `docs/DEVICE.md`; move the panel geometry from "assumed" to "verified".
 - [ ] Copy a `paperwhite render` PNG to the device and display it with `eips -g`, in both
       orientations; confirm the landscape rotation direction.
-- [ ] From the device: `wget -O /dev/null http://smokingpi.lan:8765/health` to confirm
+- [ ] From the device: `wget -O /dev/null http://<server>.lan:8765/health` to confirm
       DNS-name discovery works from the Kindle's resolver.
 - [ ] Probe touch: which `/dev/input/event*` node fires on a tap, and whether it fires
       with the stock GUI running.
@@ -58,7 +58,7 @@ Goal: real data, refreshed automatically, served on the LAN.
 - [x] `paperwhite serve`: refresh every `refresh_minutes`, render both orientations, keep
       the last good snapshot, serve `/dashboard/{landscape,portrait}.png`, `/dashboard.png`
       and the `/health` identity on port 8765; systemd unit and Avahi service file for the
-      Raspberry Pi (installed on `smokingpi` 2026-09-18 with the mock provider).
+      Raspberry Pi (installed on the maintainer's Pi 2026-09-18 with the mock provider).
 - [ ] Switch the installed unit to the live provider once it exists.
 - [x] Offline frame when no snapshot has ever succeeded; "Updated" footer already covers
       stale data.

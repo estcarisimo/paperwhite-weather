@@ -22,7 +22,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - `paperwhite serve` and `service.py`: fetch on a schedule, keep the last good snapshot,
   render frames on request for both orientations, serve `/health`, `/dashboard.png`, and
   `/dashboard/{landscape,portrait}.png` on port 8765. Offline frame before the first fetch.
-- `deploy/`: systemd user unit and Avahi service file; `docs/DEPLOY.md` with the steps
+- `paperwhite serve` reads `PAPERWHITE_CONFIG`, `PAPERWHITE_PROVIDER`, `PAPERWHITE_HOST`,
+  and `PAPERWHITE_PORT` from the environment; `/health` reports the server's `hostname`.
+- `deploy/`: systemd user unit (configured through those variables and an optional
+  `.env`) and Avahi service file; `docs/DEPLOY.md` with the steps
   verified on the Raspberry Pi.
 - Design docs: `docs/ARCHITECTURE.md`, `docs/DEVICE.md`, `docs/ROADMAP.md`.
 - `docs/REPOSITORY_STATE.md`: verified repository settings (ruleset, security features, CI)
