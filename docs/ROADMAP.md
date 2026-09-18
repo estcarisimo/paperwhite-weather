@@ -27,23 +27,23 @@ Done: CI green on `main`, ruleset active, decision accepted.
 
 Goal: shell access to the Kindle and a static image on its screen.
 
-- [ ] Jailbreak the Paperwhite 3 with WinterBreak2 (runbook in `docs/DEVICE.md`:
-      fill the disk against OTA, stage `winterbreak2/`, browser step on the device);
-      install KUAL, MRPI, USBNetwork.
-- [ ] Record `eips -i`, `uname -a`, tool availability, input device nodes, and package
-      versions in `docs/DEVICE.md`; move the panel geometry from "assumed" to "verified".
-- [ ] Copy a `paperwhite render` PNG to the device and display it with `eips -g`, in both
-      orientations; confirm the landscape rotation direction.
-- [ ] From the device: `wget -O /dev/null http://<server>.lan:8765/health` to confirm
-      DNS-name discovery works from the Kindle's resolver.
-- [ ] Probe touch: which `/dev/input/event*` node fires on a tap, and whether it fires
-      with the stock GUI running.
+- [x] Jailbreak the Paperwhite 3 with WinterBreak2 (2026-09-18); install KUAL, MRPI,
+      USBNetwork; SSH over Wi-Fi with a key (2026-09-19).
+- [x] Record `eips -i`, `uname -a`, tool availability, input device nodes, and package
+      versions in `docs/DEVICE.md`; panel geometry verified (1072x1448, 8-bit gray).
+- [x] Fetch a live frame from the Pi on the device and display it with `eips -g`
+      (2026-09-19, landscape).
+- [ ] Display the portrait frame too; confirm the landscape rotation direction as mounted.
+- [x] From the device: `wget http://smokingpi.lan:8765/health` returned the service
+      identity, so DNS-name discovery works from the Kindle's resolver (2026-09-19).
+- [x] Touch: `/dev/input/event1` (`cyttsp4_mt`) fires on a tap with the stock GUI running.
 - [ ] Check readability of the `minimal` skin from across a room; adjust type sizes.
 - [ ] Measure: Wi-Fi reconnect time, whether RTC wake from suspend works, idle battery
       drain over a night.
 
-Done when: a frame rendered by this package is on the e-ink panel in landscape and
-`docs/DEVICE.md` has no "assumed" entries left for the panel, the toolchain, and touch.
+Done when: a frame rendered by this package is on the e-ink panel in landscape (done) and
+`docs/DEVICE.md` has no "assumed" entries left for the panel, the toolchain, and touch
+(done). Remaining items above roll into Sprint 3.
 
 ## Sprint 2 — Live weather service (M2)
 

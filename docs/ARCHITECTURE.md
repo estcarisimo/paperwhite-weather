@@ -58,12 +58,12 @@ tap toggles the bit and refreshes immediately with the other image; the periodic
 uses whatever the bit says. The server never needs to know which orientation is on the
 wall, and the two images are always consistent because they come from the same render.
 
-Reading the tap: the touch controller is `/dev/input/event*` (the exact node is recorded
-in `docs/DEVICE.md` once verified). Each event is a fixed-size struct; the client reads
-with a timeout (`timeout <s> dd bs=<struct> count=1`) while the device is awake, and any
-event counts as a tap. This is deliberately crude: one gesture, one action. Whether the
-stock GUI must be stopped for the raw events to reach the script, and whether the device
-can stay awake long enough to be tapped, are Sprint 1 measurements.
+Reading the tap: the touch controller is `/dev/input/event1` (`cyttsp4_mt`, verified
+2026-09-19). Each event is a 16-byte struct; the client reads with a timeout
+(`timeout <s> dd if=/dev/input/event1 bs=16 count=1`) while the device is awake, and any
+event counts as a tap. This is deliberately crude: one gesture, one action. Verified: the
+raw events reach a script while the stock GUI is running. Still open: whether the device
+can stay awake long enough to be tapped (Sprint 3).
 
 ### Discovery: how the Kindle finds the Pi
 
@@ -77,7 +77,10 @@ Verified on this network on 2026-09-18 from the Pi:
 
 Because the Kindle gets its DNS server from the same router, `http://<server>.lan:8765/`
 resolves on the device with no mDNS support needed, where `<server>` is whatever the
-server machine's hostname is (`smokingpi` in the reference deployment, verified above). The
+server machine's hostname is (`smokingpi` in the reference deployment). **Verified from
+the Kindle on 2026-09-19**: `wget -q -O - http://smokingpi.lan:8765/health` over SSH
+returned the service identity, and `/dashboard.png` fetched the same way was painted
+with `eips`. The
 service listens on **port 8765** by default (`PAPERWHITE_PORT` or `--port` to change).
 
 The server's name is **client configuration**, never a constant in code or a default in

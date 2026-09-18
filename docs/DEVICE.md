@@ -13,19 +13,41 @@ confirmed on the device). Do not move an item to "verified" without evidence.
 | Firmware | `Kindle 5.16.2.1.1 (409747 002)` | `cat /media/smokingpi/Kindle/system/version.txt` |
 | User storage | 3.1 GB, 360 KB used | `df -h /media/smokingpi/Kindle` |
 | Mount point on the Pi | `/media/smokingpi/Kindle` (`/dev/sda1`, label `Kindle`) | `lsblk` |
-| Content | Empty `documents/`, stock `system/`; no jailbreak files present | `ls -la /media/smokingpi/Kindle` |
+| Content (before jailbreak) | Empty `documents/`, stock `system/`; no jailbreak files present | `ls -la /media/smokingpi/Kindle` |
 
-## Inferred (high confidence, confirm in Sprint 1)
+## Verified on 2026-09-19 over SSH (after the jailbreak; see the runbook below)
 
-- **Model: Kindle Paperwhite 3 (7th generation, 2015).** Serial numbers starting with
-  `G090G1` are Paperwhite 3 units in the community serial tables, and 5.16.2.1.1 is the
-  last firmware Amazon shipped for that generation. Confirm from Settings → Device Info
-  or `lipc-get-prop` after shell access.
-- **Panel: 6-inch, 1072x1448 pixels, 300 ppi, 16 gray levels.** From the product
-  specification. Confirm with `eips -i` on the device; the framebuffer geometry it prints
-  is the source of truth for `display.width` / `display.height`.
+| Fact | Value | Evidence |
+| --- | --- | --- |
+| Jailbreak | WinterBreak2, `jb.sh v1.3.7` | `documents/JAILBROKEN.txt` |
+| Kernel | `Linux kindle 3.0.35-lab126 #8 PREEMPT Tue Aug 1 12:49:59 UTC 2023 armv7l` | `uname -a` |
+| Firmware string | `Kindle 5.16.2.1.1` | `cat /etc/prettyversion.txt` |
+| **Panel** | `xres 1072, yres 1448`, `bits_per_pixel 8`, `grayscale 1`, `line_length 1088`, driver `mxc_epdc_fb` | `/usr/sbin/eips -i` |
+| `eips` | `/usr/sbin/eips` (not on the default `PATH=/usr/bin:/bin`; call it by full path) | `ls -la /usr/sbin/eips` |
+| FBInk | `/mnt/us/usbnet/bin/fbink` (symlinked to `/usr/bin/fbink`) and `/mnt/us/libkh/bin/fbink` from the jailbreak; `fbink -e` segfaulted on the usbnet build, not investigated | `ls -la`, `fbink -e` |
+| `wget`, `curl` | `/usr/bin/wget`, `/usr/bin/curl` | `which` |
+| `lipc-get-prop`, `lipc-set-prop` | `/usr/bin/` | `which` |
+| `rtcwake` | missing; RTC wake is via `/sys/class/rtc/rtc0/wakealarm` (`max77696-rtc.0`; `rtc1`, `rtc2` also present) | `which rtcwake`, `ls /sys/class/rtc/rtc0/` |
+| **Touch controller** | `/dev/input/event1`, name `cyttsp4_mt`; `event0` is the power button (`max77696-onkey`) | `cat /proc/bus/input/devices` |
+| Tap readable with the stock GUI running | yes: `timeout 15 dd if=/dev/input/event1 bs=16 count=4` returned `BTN_TOUCH` (type 1, code 0x14a) followed by `ABS_MT_*` events on a tap | `od` dump, 2026-09-19 |
+| Event struct | 16 bytes: 8 bytes of timestamp, 2-byte type, 2-byte code, 4-byte value | `od -t x1` dump |
+| Wi-Fi | `CONNECTED`, `192.168.86.51/24`, resolver `nameserver 192.168.86.1`, `domain lan` | `lipc-get-prop com.lab126.wifid cmState`, `ip addr`, `/etc/resolv.conf` |
+| **Discovery from the device** | `wget -q -O - http://smokingpi.lan:8765/health` returned the service identity JSON | run over SSH, 2026-09-19 |
+| **First frame on the panel** | `wget http://smokingpi.lan:8765/dashboard.png && /usr/sbin/eips -c && /usr/sbin/eips -g /mnt/us/dashboard.png` painted the landscape frame (`update_mode=PARTIAL, wave_mode=2`) | run over SSH, 2026-09-19 |
+| Device hostname | `kindle`; the router did **not** resolve `kindle.lan`, so the Kindle is found by IP or by scanning | `cat /etc/hostname`, `getent hosts kindle.lan` on the Pi |
+| Battery | 99 % | `lipc-get-prop com.lab126.powerd battLevel` |
+| powerd | `state active`, `preventScreenSaver 0` | `lipc-get-prop com.lab126.powerd ...` |
+| Memory | 502 MB total, ~200 MB free | `free -m` |
+| User storage after everything | 553 MB free of 3.0 GB (five filler files still in place) | `df -h /mnt/us` |
 
-## Jailbreak runbook (verified against the sources on 2026-09-18; steps 1–4 executed)
+## Model
+
+**Kindle Paperwhite 3 (7th generation, 2015).** Serial prefix `G090G1` per the community
+serial tables, and the panel geometry reported by `eips -i` (1072x1448, 8-bit grayscale)
+matches that model. The default `display.width` / `display.height` in `config.py` are
+therefore verified for this device.
+
+## Jailbreak runbook (executed 2026-09-18/19; all steps done)
 
 **Legal and warranty note.** Jailbreaking modifies the software of a device you own. It
 likely breaches Amazon's Kindle terms of use, voids any remaining warranty, and can brick
@@ -69,37 +91,49 @@ Done from the Pi (device mounted at `/media/smokingpi/Kindle`), **executed 2026-
    `curl -L https://kindlemodding.org/jb.sh | sh`; that script is the jailbreak.
 4. Unmounted: `udisksctl unmount -b /dev/sda1`.
 
-Done on the device (needs hands; the maintainer):
+Done on the device by the maintainer, **2026-09-18**:
 
-5. Unplug USB. Settings → Wi-Fi: join the home network.
-6. Home → menu (three dots) → **Experimental Browser**. Go to
-   `https://penguins184.xyz/wb2`. Press **Jailbreak**. Wait for completion.
-7. Check: a `Run Hotfix` booklet or a jailbreak confirmation appears in the library or on
-   screen. If the browser route fails, use the WinterBreak fallback (requires the device
-   to be registered): airplane mode → reboot → copy the `WinterBreak.tar.gz` contents to
-   the USB root → open the Kindle Store → allow turning airplane mode off → tap the
-   WinterBreak icon → wait about 30 seconds for the GUI to restart.
-8. Plug USB back in for the next stage.
+5. Unplugged USB, joined the home Wi-Fi.
+6. Home → menu → **Experimental Browser** → `https://penguins184.xyz/wb2` → **Jailbreak**.
+7. Result: `documents/JAILBROKEN.txt` ("You are jailbroken! (jb.sh v1.3.7) Winterbreak2
+   Jailbreak") and `libkh/bin/fbink` on the USB partition; two crash reports from the
+   exploited app in `documents/` (expected; they can be deleted). The WinterBreak
+   fallback (registered device, Kindle Store → Mesquito) was not needed.
+8. Plugged USB back in.
 
-Done from the Pi again:
+Done from the Pi, **2026-09-19** (checksums matched the downloads):
 
-9. **KUAL** (launcher): copy `KUAL.sh` and `KUAL.jar` from `PEKI.zip`
-   (`KindleTweaks/PEKI`, latest release) to `documents/`.
-10. **MRPI** (package installer): extract `kual-mrinstaller-khf.zip` (from the KindleModding
-    site, provided by Marek) and copy its `extensions/` and `mrpackages/` folders to the
-    USB root.
-11. **USBNetwork** (SSH over USB and Wi-Fi): put the MobileRead `kindle-usbnet-*.bin`
-    package in `mrpackages/`, unmount, then on the device open KUAL → Helper → *Install
-    MR Packages*.
-12. Delete `fill_disk/` once the jailbreak is confirmed and OTA blocking is in place
-    (`renameotabin` is included by WinterBreak; verify with the *Check OTA Status*
-    scriptlet).
+9. **KUAL**: `KUAL.sh` and `KUAL.jar` from `PEKI.zip` (`KindleTweaks/PEKI` v1.0,
+   SHA-256 `f653045909ed230496c3d8176c9901d3a6a1f693c52b488569be6a60e0852499`) to
+   `documents/`.
+10. **MRPI** 1.7.N r19303 ("Patched for FW >= 5.16.3", works on 5.16.2.1.1):
+    `kual-mrinstaller-khf.zip` from kindlemodding.org (SHA-256
+    `9974dfc2d1e7687b3fc74d68f6b5aeab2428f22d83ab82e6d600a0384c607d09`); its `extensions/`
+    and `mrpackages/` to the USB root. Two filler files deleted first (611 MB free).
+11. **USBNetwork** 0.22.N r19297 (NiLuJe, MobileRead thread 225030;
+    `kindle-usbnet-0.22.N-r19297.tar.xz`, SHA-256
+    `cf971557d42cc0a6d7699f1c743108c681fa41e3d67ee5802a91932d130d4032`):
+    `Update_usbnet_0.22.N_install_pw2_and_up.bin` into `mrpackages/`. The `usbnetlite`
+    alternative was skipped because its release notes require firmware 5.16.3 or later.
+    On the device: KUAL → Helper → *Install MR Packages*. The MRPI log ended with
+    `Success! :)` followed by "Really failed to remount rootfs RO", which is a known
+    harmless message from this MRPI build; the device then restarted.
+12. **SSH over Wi-Fi**, from the Pi: the Pi's public key into
+    `usbnet/etc/authorized_keys`; in `usbnet/etc/config`: `USE_WIFI="true"`,
+    `USE_WIFI_SSHD_ONLY="true"` (SSH only over Wi-Fi; USB stays mass storage so files can
+    still be edited from the Pi); `usbnet/DISABLED_auto` renamed to `usbnet/auto` so it
+    starts at boot. After a restart the Kindle answered on port 22 (dropbear) at
+    `192.168.86.51`; `ssh root@192.168.86.51` with the key works. Login is `root`; the
+    password is not used.
+13. Not yet done: delete `fill_disk/` (five files remain), confirm OTA blocking with the
+    *Check OTA Status* scriptlet, delete the crash reports from `documents/`.
 
-For the first on-device display test, `docs/img/minimal-landscape.png` is a landscape
-frame already rotated to the portrait framebuffer, and `docs/img/minimal-portrait.png`
-is the portrait one; copy either to the device and run `eips -g <file>`.
+The Kindle's DHCP hostname is `kindle` and this router does not resolve it, so the Pi
+finds the device by scanning the LAN for port 22 (or use a DHCP reservation on the
+router). That is the opposite direction from the dashboard traffic and only matters for
+development.
 
-Record after step 11: `eips -i`, `uname -a`, `cat /etc/prettyversion.txt`, `which wget
+Record after shell access (done, see the verified table above): `eips -i`, `uname -a`, `cat /etc/prettyversion.txt`, `which wget
 curl eips lipc-set-prop lipc-get-prop rtcwake`, `ls /dev/input/`, and `cat
 /proc/bus/input/devices` (which node is the touch controller). Then move the panel
 geometry and the toolchain table below from "assumed" to "verified".
@@ -114,15 +148,22 @@ is typically `event1`. To verify: `cat /proc/bus/input/devices`, then
 check whether the stock GUI (`lab126_gui` / `framework`) must be running for touches to
 register at the device node; other dashboards stop the framework and paint over it.
 
-## Kindle-side runtime (assumed until shell access)
+## Kindle-side runtime (verified 2026-09-19)
 
-| Tool | Expected | Use |
+| Tool | Where | Use |
 | --- | --- | --- |
-| `eips` | present in stock firmware | `eips -c` clears the panel; `eips -g file.png` paints an image; `eips -i` prints panel info |
-| `wget` | BusyBox applet | Download the PNG from `http://<server>.lan:8765/` (plain HTTP on the LAN; HTTPS support on the device is uncertain) |
-| `lipc-set-prop` / `lipc-get-prop` | present | Toggle Wi-Fi, prevent screensaver, read battery |
-| `rtcwake` or `/sys/class/rtc/rtc*/wakealarm` | one of them | Wake from suspend on a timer |
-| `powerd` | present | Must be told not to blank the screen or suspend on its own |
+| `eips` | `/usr/sbin/eips` (full path needed) | `eips -c` clears the panel; `eips -g file.png` paints an image; `eips -i` prints panel info |
+| `wget` | `/usr/bin/wget` | Download the PNG from `http://<server>.lan:8765/` over plain HTTP (verified) |
+| `curl` | `/usr/bin/curl` | Alternative to `wget` |
+| `lipc-set-prop` / `lipc-get-prop` | `/usr/bin/` | Wi-Fi state, screensaver, battery (verified reads) |
+| RTC wake | `/sys/class/rtc/rtc0/wakealarm` (`rtcwake` is absent) | Wake from suspend on a timer; not exercised yet |
+| Touch | `/dev/input/event1` (`cyttsp4_mt`), 16-byte events | Tap detection; verified readable with the stock GUI running |
+| FBInk | `/usr/bin/fbink` (usbnet) | Optional alternative to `eips`; the usbnet build crashed on `-e`, so `eips` is the tool for now |
+| `powerd` | via lipc | Must be told not to blank the screen or suspend on its own (Sprint 3) |
+
+Still open for Sprint 3: whether the stock GUI repaints over our frame and how to stop it
+(`stop framework` vs. painting on top), screensaver suppression, suspend and RTC wake, and
+the rotation direction of the landscape frame as mounted on the wall.
 
 Anything in `kindle/` is a **draft** until it has been run on the device, and its header
 says so.
