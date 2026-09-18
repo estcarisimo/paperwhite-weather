@@ -19,6 +19,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - Renderer that composes a skin at the Kindle Paperwhite 3 native size (1072x1448),
   supports portrait and landscape, and quantizes to 16 gray levels.
 - `paperwhite` CLI: `render`, `skins`, `providers`, `version`.
+- `paperwhite serve` and `service.py`: fetch on a schedule, keep the last good snapshot,
+  render frames on request for both orientations, serve `/health`, `/dashboard.png`, and
+  `/dashboard/{landscape,portrait}.png` on port 8765. Offline frame before the first fetch.
+- `deploy/`: systemd user unit and Avahi service file; `docs/DEPLOY.md` with the steps
+  verified on the Raspberry Pi.
 - Design docs: `docs/ARCHITECTURE.md`, `docs/DEVICE.md`, `docs/ROADMAP.md`.
 - `docs/REPOSITORY_STATE.md`: verified repository settings (ruleset, security features, CI)
   with dates and evidence.

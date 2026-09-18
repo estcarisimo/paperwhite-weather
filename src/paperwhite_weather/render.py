@@ -5,11 +5,13 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from paperwhite_weather.config import Settings
+from paperwhite_weather.fonts import load_font
 from paperwhite_weather.models import WeatherSnapshot, require_aware
 from paperwhite_weather.skins import get_skin
+from paperwhite_weather.skins.base import BLACK, DARK_GRAY, WHITE, format_clock
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +84,37 @@ def render_dashboard(
         )
     if image.mode != "L":
         image = image.convert("L")
+    if display.orientation == "landscape":
+        image = image.rotate(90, expand=True)
+    return quantize_grayscale(image)
+
+
+def render_offline(settings: Settings, now: datetime, message: str) -> Image.Image:
+    """Render a frame that says there is no weather data, at the display's native size.
+
+    Used by the service before the first successful fetch, so the device never shows a
+    blank screen or a frame that pretends to be current.
+    """
+    display = settings.display
+    moment = require_aware(now).astimezone(settings.location.tzinfo)
+    width, height = display.canvas_size
+    image = Image.new("L", (width, height), WHITE)
+    draw = ImageDraw.Draw(image)
+    scale = min(width, height) / 1072
+    draw.text(
+        (width / 2, height * 0.42),
+        message,
+        font=load_font("bold", max(1, round(64 * scale))),
+        fill=BLACK,
+        anchor="mm",
+    )
+    draw.text(
+        (width / 2, height * 0.42 + round(90 * scale)),
+        f"Checked {format_clock(moment, display.time_format)}",
+        font=load_font("regular", max(1, round(36 * scale))),
+        fill=DARK_GRAY,
+        anchor="mm",
+    )
     if display.orientation == "landscape":
         image = image.rotate(90, expand=True)
     return quantize_grayscale(image)
