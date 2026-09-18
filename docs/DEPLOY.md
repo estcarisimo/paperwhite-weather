@@ -17,7 +17,8 @@ snapshot, and answers on port 8765:
 
 Frames are rendered when requested, with the request time on the clock, and memoized per
 minute. Until the first successful fetch the frames say "No weather data yet" with the time
-of the last attempt. A failed refresh keeps the previous snapshot and is reported in
+of the last fetch attempt (or "No fetch attempted yet"), not the request time, so a long
+outage looks like one. A failed refresh keeps the previous snapshot and is reported in
 `/health` as `last_error`.
 
 ## Install

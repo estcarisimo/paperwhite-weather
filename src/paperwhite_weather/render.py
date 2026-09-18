@@ -89,18 +89,34 @@ def render_dashboard(
     return quantize_grayscale(image)
 
 
-def render_offline(settings: Settings, now: datetime, message: str) -> Image.Image:
+def render_offline(
+    settings: Settings, last_attempt_at: datetime | None, message: str
+) -> Image.Image:
     """Render a frame that says there is no weather data, at the display's native size.
 
     Used by the service before the first successful fetch, so the device never shows a
     blank screen or a frame that pretends to be current.
+
+    Parameters
+    ----------
+    settings
+        User configuration; selects size, orientation, and time format.
+    last_attempt_at
+        When the service last tried to fetch weather (timezone-aware), or ``None`` if it
+        has not tried yet. Shown on the frame so a long outage is visible as such.
+    message
+        Headline, for example ``"No weather data yet"``.
     """
     display = settings.display
-    moment = require_aware(now).astimezone(settings.location.tzinfo)
     width, height = display.canvas_size
     image = Image.new("L", (width, height), WHITE)
     draw = ImageDraw.Draw(image)
     scale = min(width, height) / 1072
+    if last_attempt_at is None:
+        detail = "No fetch attempted yet"
+    else:
+        local = require_aware(last_attempt_at).astimezone(settings.location.tzinfo)
+        detail = f"Last attempt {local:%a} {format_clock(local, display.time_format)}"
     draw.text(
         (width / 2, height * 0.42),
         message,
@@ -110,7 +126,7 @@ def render_offline(settings: Settings, now: datetime, message: str) -> Image.Ima
     )
     draw.text(
         (width / 2, height * 0.42 + round(90 * scale)),
-        f"Checked {format_clock(moment, display.time_format)}",
+        detail,
         font=load_font("regular", max(1, round(36 * scale))),
         fill=DARK_GRAY,
         anchor="mm",

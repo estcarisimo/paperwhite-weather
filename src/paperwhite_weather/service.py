@@ -55,7 +55,7 @@ class ServiceState:
     last_attempt_at: datetime | None = None
     refresh_count: int = 0
     failure_count: int = 0
-    frames: dict[tuple[Orientation, str], bytes] = field(default_factory=dict)
+    frames: dict[tuple[Orientation, str, str], bytes] = field(default_factory=dict)
 
 
 class DashboardService:
@@ -105,24 +105,32 @@ class DashboardService:
     def frame(self, orientation: Orientation) -> bytes:
         """PNG bytes for ``orientation`` at the current minute, rendered from the cached snapshot.
 
-        Frames are memoized per (orientation, minute), so many clients polling in the same
-        minute cost one render.
+        Frames are memoized per (orientation, minute, snapshot), so many clients polling in
+        the same minute cost one render, and a refresh that lands mid-render can never
+        leave a frame of the previous snapshot in the cache.
         """
         now = self.clock()
-        key = (orientation, now.strftime("%Y-%m-%dT%H:%M"))
         with self._lock:
-            cached = self.state.frames.get(key)
             snapshot = self.state.snapshot
+            last_attempt_at = self.state.last_attempt_at
+            key = (
+                orientation,
+                now.strftime("%Y-%m-%dT%H:%M"),
+                _snapshot_id(snapshot, last_attempt_at),
+            )
+            cached = self.state.frames.get(key)
         if cached is not None:
             return cached
         display = self.settings.display.model_copy(update={"orientation": orientation})
         settings = self.settings.model_copy(update={"display": display})
         if snapshot is None:
-            image = render_offline(settings, now, "No weather data yet")
+            image = render_offline(settings, last_attempt_at, "No weather data yet")
         else:
             image = render_dashboard(snapshot, settings, now=now)
         data = _png_bytes(image)
         with self._lock:
+            if self.state.snapshot is not snapshot:
+                return data  # a refresh landed meanwhile; serve this frame, cache nothing
             # Keep only the current minute; older keys are never requested again.
             self.state.frames = {k: v for k, v in self.state.frames.items() if k[1] == key[1]}
             self.state.frames[key] = data
@@ -157,6 +165,17 @@ class DashboardService:
                 return
 
 
+def _snapshot_id(snapshot: WeatherSnapshot | None, last_attempt_at: datetime | None) -> str:
+    """Cache-key component that changes whenever the rendered content would change.
+
+    With a snapshot, that is the snapshot itself; without one, the offline frame shows
+    the last attempt time, so a new failed attempt must produce a new key.
+    """
+    if snapshot is None:
+        return f"offline@{_iso(last_attempt_at)}"
+    return f"{snapshot.source}@{snapshot.fetched_at.isoformat()}"
+
+
 def _iso(value: datetime | None) -> str | None:
     return value.isoformat(timespec="seconds") if value is not None else None
 
@@ -172,7 +191,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     server: DashboardServer  # narrowed for type checkers
     server_version = f"{SERVICE_NAME}/{__version__}"
-    sys_version = ""
+
+    def version_string(self) -> str:
+        """``Server`` header without the Python version (and without the trailing space)."""
+        return self.server_version
 
     def do_GET(self) -> None:  # noqa: N802 - name fixed by BaseHTTPRequestHandler
         service = self.server.service

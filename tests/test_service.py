@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 import pytest
 from PIL import Image
 
+from paperwhite_weather import __version__
 from paperwhite_weather.config import Location, Settings, Units
 from paperwhite_weather.models import WeatherSnapshot
 from paperwhite_weather.providers.mock import MockProvider
@@ -66,13 +67,34 @@ def _png_size(data: bytes) -> tuple[int, int]:
 
 
 def test_offline_frame_before_first_refresh(settings: Settings) -> None:
-    service = DashboardService(settings, FailingProvider(), clock=FakeClock(FIXED_NOW))
-    assert _png_size(service.frame("landscape")) == (1072, 1448)
+    clock = FakeClock(FIXED_NOW)
+    service = DashboardService(settings, FailingProvider(), clock=clock)
+    never = service.frame("landscape")
+    assert _png_size(never) == (1072, 1448)
     assert _png_size(service.frame("portrait")) == (1072, 1448)
     health = service.health()
     assert health["service"] == SERVICE_NAME
     assert health["status"] == "no-data"
     assert health["fetched_at"] is None
+
+    assert service.refresh() is False
+    attempted = service.frame("landscape")
+    assert attempted != never, "the offline frame shows the last attempt once there is one"
+    clock.advance(minutes=45)
+    later = service.frame("landscape")
+    assert later == attempted, "the offline frame shows the attempt time, not the request time"
+
+
+def test_offline_frame_text_is_the_last_attempt(settings: Settings) -> None:
+    from paperwhite_weather.render import render_offline
+
+    never = render_offline(settings, None, "No weather data yet")
+    at = render_offline(settings, FIXED_NOW, "No weather data yet")
+    later = render_offline(settings, FIXED_NOW + timedelta(minutes=45), "No weather data yet")
+    assert never.size == at.size == (1072, 1448)
+    assert never.tobytes() != at.tobytes() != later.tobytes()
+    with pytest.raises(ValueError, match="timezone-aware"):
+        render_offline(settings, datetime(2026, 9, 18, 21, 45), "x")
 
 
 def test_refresh_success_then_failure_keeps_last_good(settings: Settings) -> None:
@@ -111,7 +133,40 @@ def test_frames_are_memoized_per_minute(settings: Settings) -> None:
     clock.advance(seconds=60)
     b = service.frame("portrait")
     assert b is not a
-    assert set(service.state.frames) == {("portrait", clock.now.strftime("%Y-%m-%dT%H:%M"))}
+    assert {key[:2] for key in service.state.frames} == {
+        ("portrait", clock.now.strftime("%Y-%m-%dT%H:%M"))
+    }
+
+
+def test_refresh_during_render_does_not_cache_a_stale_frame(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A refresh that lands while a frame is rendering must not poison the cache."""
+    import paperwhite_weather.service as service_module
+
+    clock = FakeClock(FIXED_NOW)
+    first = MockProvider(now=FIXED_NOW)
+    second = MockProvider(now=FIXED_NOW + timedelta(minutes=10))
+    service = DashboardService(settings, first, clock=clock)
+    service.refresh()
+
+    real_render = service_module.render_dashboard
+    refreshed = False
+
+    def render_and_refresh(*args: object, **kwargs: object) -> Image.Image:
+        nonlocal refreshed
+        if not refreshed:
+            refreshed = True
+            service.provider = second
+            service.refresh()  # swaps the snapshot mid-render
+        return real_render(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(service_module, "render_dashboard", render_and_refresh)
+    stale = service.frame("landscape")
+    assert service.state.frames == {}, "a frame of the replaced snapshot must not be cached"
+    fresh = service.frame("landscape")
+    assert fresh != stale
+    assert service.frame("landscape") is fresh
 
 
 def test_refresh_loop_stops(settings: Settings) -> None:
@@ -143,6 +198,7 @@ def _get(url: str, method: str = "GET") -> tuple[int, dict[str, str], bytes]:
 def test_http_health(server: str) -> None:
     status, headers, body = _get(f"{server}/health")
     assert status == 200
+    assert headers["Server"] == f"{SERVICE_NAME}/{__version__}"
     assert headers["Content-Type"] == "application/json"
     assert headers["Cache-Control"] == "no-store"
     document = json.loads(body)
