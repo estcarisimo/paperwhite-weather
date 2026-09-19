@@ -51,15 +51,15 @@ class WeatherStationSkin:
             gy = self._grid(c, right_x, y, right_w)
             ay = c.sun_arc((m, self._current_height(c, y), m + left_w, y + c.px(420)))
             y2 = max(ay, gy) + c.px(30)
-            y2 = c.rule(m, y2, w, LIGHT_GRAY, 2) + c.px(24)
-            self._forecast_columns(c, m, y2, w)
+            y2 = c.rule(m, y2, w, LIGHT_GRAY, 2) + c.px(16)
+            self._forecast(c, m, y2, w)
         else:
             self._current(c, m, y, w)
             y = self._current_height(c, y) + c.px(20)
             y = self._grid(c, m, y, w) + c.px(30)
             y = c.sun_arc((m, y, c.width - m, y + c.px(270))) + c.px(30)
-            y = c.rule(m, y, w, LIGHT_GRAY, 2) + c.px(24)
-            self._forecast_columns(c, m, y, w)
+            y = c.rule(m, y, w, LIGHT_GRAY, 2) + c.px(16)
+            self._forecast(c, m, y, w)
         c.footer()
         return c.image
 
@@ -73,7 +73,6 @@ class WeatherStationSkin:
         c.text(
             (tx, y - c.px(16)), temp, "bold", 170, anchor="la", max_width=width - icon - c.px(30)
         )
-        today = c.snapshot.today
         c.text(
             (tx, y + c.px(150)),
             c.condition_label(c.snapshot.current.condition),
@@ -84,7 +83,7 @@ class WeatherStationSkin:
         )
         c.text(
             (tx, y + c.px(205)),
-            c.high_low(today),
+            c.feels_like_text(),
             "regular",
             40,
             fill=DARK_GRAY,
@@ -109,30 +108,7 @@ class WeatherStationSkin:
         rows = (len(cells) + columns - 1) // columns
         return round(y + cell_h * rows)
 
-    def _forecast_columns(self, c: Canvas, x: int, y: int, width: int) -> None:
-        days = c.snapshot.daily[1 : _FORECAST_DAYS + 1]
-        if not days:
-            return
-        column = width / len(days)
-        icon = c.px(110)
-        for k, day in enumerate(days):
-            cx = x + column * (k + 0.5)
-            c.text((cx, y), f"{day.date:%a}", "bold", 40, anchor="ma")
-            c.icon(day.condition, (cx - icon / 2, y + c.px(52), cx + icon / 2, y + c.px(52) + icon))
-            c.text(
-                (cx, y + c.px(52) + icon + c.px(14)),
-                c.range_text(day),
-                "regular",
-                36,
-                anchor="ma",
-                max_width=column * 0.95,
-            )
-            if day.precipitation_probability is not None:
-                c.text(
-                    (cx, y + c.px(52) + icon + c.px(62)),
-                    f"{round(day.precipitation_probability)}%",
-                    "regular",
-                    30,
-                    fill=DARK_GRAY,
-                    anchor="ma",
-                )
+    def _forecast(self, c: Canvas, x: int, y: int, width: int) -> None:
+        """Today and the next days as temperature bars on one scale, down to the footer."""
+        days = c.snapshot.daily[: _FORECAST_DAYS + 1]
+        c.temperature_bars((x, y, x + width, c.height - c.margin - c.px(50)), days)
