@@ -48,7 +48,7 @@ src/paperwhite_weather/
                     (draw_sun_arc: the day's arc over a horizon line, sun marked),
                     temperature_bars.py (draw_temperature_bars: days as low-high bars on one
                     axis, today marked), common.py (Canvas: scaled px(), text(), rule(), icon(),
-                    sun_arc(), temperature_bars(), footer(), metrics()),
+                    sun_arc(), temperature_bars(), day_columns(), footer(), metrics()),
                     minimal.py, newspaper.py, weather_station.py, big_clock.py, forecast.py;
                     registry in __init__.py: get_skin(name), available_skins()
   render.py         render_dashboard(snapshot, settings, now) -> "L" image at native size;
