@@ -11,11 +11,13 @@ from paperwhite_weather.models import Condition
 from paperwhite_weather.skins.temperature_bars import TemperatureRow, draw_temperature_bars
 
 ROWS = [
-    TemperatureRow("Today", 57, 75, Condition.PARTLY_CLOUDY, current=70, note="10%"),
-    TemperatureRow("Sat", 54, 66, Condition.RAIN, note="80%"),
-    TemperatureRow("Sun", 55, 70, Condition.THUNDERSTORM, note="65%"),
-    TemperatureRow("Mon", 52, 64, Condition.CLOUDY, note="30%"),
-    TemperatureRow("Tue", 48, 72, Condition.CLEAR, note="0%"),
+    TemperatureRow(
+        "Today", 57, 75, Condition.PARTLY_CLOUDY, current=70, note="10%", probability=10
+    ),
+    TemperatureRow("Sat", 54, 66, Condition.RAIN, note="80%", probability=80),
+    TemperatureRow("Sun", 55, 70, Condition.THUNDERSTORM, note="65%", probability=65),
+    TemperatureRow("Mon", 52, 64, Condition.CLOUDY, note="30%", probability=30),
+    TemperatureRow("Tue", 48, 72, Condition.CLEAR, note="0%", probability=0),
 ]
 
 
@@ -150,3 +152,17 @@ def test_flat_day_and_empty_rows() -> None:
     # Every value equal: the axis is widened instead of dividing by zero.
     assert _render([TemperatureRow("Today", 60, 60, current=60)], (600, 100)).getextrema()[0] == 0
     assert _render([], (600, 200)).getextrema() == (255, 255)
+
+
+@pytest.mark.behaviour
+def test_note_drop_fills_with_the_probability() -> None:
+    """The drop next to a note carries more ink the higher the probability."""
+    size = (960, 480)
+    rows = [replace(r, probability=None) for r in ROWS]
+
+    def ink(probability: float | None) -> int:
+        image = _render([replace(rows[1], probability=probability), *rows[2:]], size)
+        row = (700, 20, 1000, 20 + size[1] // 4)  # the note column of the first row
+        return sum(image.crop(row).histogram()[:128])  # the drop is gray, like the note
+
+    assert ink(None) < ink(30) < ink(90)

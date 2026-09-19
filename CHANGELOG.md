@@ -32,6 +32,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Sans in every skin; DejaVu Serif stays for `newspaper`.
 - Icons redrawn with round-capped strokes and a cleaner cloud; dots for drizzle; moon
   variants for clear and partly cloudy, used for the current condition after sunset.
+- Sun arc redrawn: civil twilight as thick gray bands under each end of the horizon, the
+  night as a faint dotted half below it with a crescent moon marking the night's progress,
+  one label line (sunrise and sunset in bold, dawn and dusk in small gray type between
+  them when there is room).
+- Temperature bars redrawn: a pale track shows the shared axis, the low and high sit in
+  aligned columns either side of it, and the precipitation probability is a drop filled
+  to the probability next to the number (`icons.draw_drop`).
 - The sun's day as one graphic (`skins/sun_arc.py`): an arc over a horizon line from
   civil dawn to civil dusk, twilight in gray below the line, sunrise and sunset marked and
   labeled, a filled disc where the sun is now (hollow under the horizon at night). Used
