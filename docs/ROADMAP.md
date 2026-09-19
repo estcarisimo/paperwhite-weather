@@ -110,8 +110,29 @@ the refinement time goes, once the device runs unattended.
       after partial refreshes, the amount of empty space in portrait.
 - [ ] UV index and moon phase in the model and the weather-station skin.
 
+### Refinement backlog (maintainer review of the first versions, 2026-09-19)
+
+The first versions read well; the direction is **fewer words, more pictures**.
+
+- [ ] **Sun times as a graphic**, not four labeled clocks: a horizon arc from civil dawn
+      to civil dusk with the sun's current position, sunrise and sunset marked, twilight
+      as gray bands. One icon-like element replaces "Dawn 6:12 AM  Sunrise 6:40 AM ...".
+- [ ] **Temperature range as a scale**: today's low/high (and the forecast days') drawn
+      as horizontal bars on a shared axis, with the current temperature marked, rather
+      than "H 75°  L 57°" text. Aligned bars make the week comparable at a glance.
+- [ ] **Less text where a symbol carries the meaning**: precipitation probability as a
+      drop icon with the number, wind as an arrow with the speed, humidity as a
+      half-filled drop. The `newspaper` skin stays deliberately textual; the other four
+      move toward icons.
+- [ ] **Icon refinement**: the condition icons are a first cut; review each at panel
+      scale (photo of the device), unify stroke weights, and consider distinct glyphs
+      for showers versus steady rain and for night (clear night, partly cloudy night)
+      once the model knows whether it is night.
+- [ ] Portrait layouts leave empty space at the bottom (`newspaper`, `weather-station`);
+      either grow the forecast or add the sun graphic there.
+
 Done: every skin renders both orientations from the mock provider and is pictured in the
-README. Refinement items above stay open.
+README. Refinement items above stay open and are where the project spends its time next.
 
 ## Sprint 5 — Open-source polish and 0.1.0 (M4)
 

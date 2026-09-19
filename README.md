@@ -166,6 +166,15 @@ portrait. `paperwhite gallery` produces all of these; CI uploads them on every r
 | `big-clock` | <img src="docs/img/big-clock-landscape-view.png" width="420"> | <img src="docs/img/big-clock-portrait.png" width="200"> |
 | `forecast` | <img src="docs/img/forecast-landscape-view.png" width="420"> | <img src="docs/img/forecast-portrait.png" width="200"> |
 
+## 🗺️ Roadmap
+
+The five skins above are first versions. The next round makes them **more graphic and
+less textual**: sun times as a horizon arc instead of four clocks, temperature ranges as
+bars on a shared scale instead of "H 75° L 57°", precipitation and wind as icons with a
+number, and a review of every icon on the physical panel. The `newspaper` skin stays
+text-first on purpose. The full plan, with what is done and what is open, is in
+[`docs/ROADMAP.md`](docs/ROADMAP.md); ideas are welcome as issues.
+
 ## 🤝 Contributing
 
 Contributions are welcome. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first, then:
