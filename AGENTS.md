@@ -88,8 +88,9 @@ uv build                                    # sdist + wheel via uv_build
   the HTTP layer on a local stub server. CI's smoke test uses `--provider mock`. To refresh
   the fixture, run the URL in `tests/fixtures/README.md` and commit the new JSON with the
   date in the filename; update the pinned values in `tests/test_open_meteo.py`.
-- Sun times are computed locally with `astral` (Apache-2.0), never taken from the
-  provider, so every provider gets civil twilight for free. `tests/test_sun.py` pins them
+- Sun times for live providers are computed locally with `astral` (Apache-2.0) via
+  `sun.compute_sun_times`, never taken from the API; `MockProvider` keeps its fixed
+  fixture times. `tests/test_sun.py` pins them
   to a US Naval Observatory table (`math` marker).
 - The service renders on request (clock = request time) and memoizes per minute; it never
   stores rendered files on disk. HTTP is stdlib `http.server`; do not add a web framework

@@ -59,7 +59,8 @@ Goal: real data, refreshed automatically, served on the LAN.
       the last good snapshot, serve `/dashboard/{landscape,portrait}.png`, `/dashboard.png`
       and the `/health` identity on port 8765; systemd unit and Avahi service file for the
       Raspberry Pi (installed on the maintainer's Pi 2026-09-18 with the mock provider).
-- [x] Installed unit on the maintainer's Pi switched to `open-meteo` via `.env` (2026-09-19).
+- [x] Installed unit on the maintainer's Pi switched to `open-meteo` via `.env` after the
+      merge of PR #7 (2026-09-19).
 - [x] Offline frame when no snapshot has ever succeeded; "Updated" footer already covers
       stale data.
 

@@ -73,7 +73,7 @@ Verified from the Kindle on 2026-09-19: `wget` of `/health` and `/dashboard.png`
 name worked on the device (`docs/DEVICE.md`).
 
 The unit defaults to the mock provider; put `PAPERWHITE_PROVIDER=open-meteo` in `.env`
-for live weather (done on the maintainer's Pi on 2026-09-19).
+for live weather (the maintainer's Pi runs it since the merge of PR #7, 2026-09-19).
 
 ## Optional: mDNS advertisement
 
