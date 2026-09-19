@@ -1,8 +1,8 @@
-"""Minimal skin: a large clock and temperature, today's range, the sun arc, a compact forecast.
+"""Minimal skin: the quiet end of the range.
 
-Two layouts share the same building blocks: a single column in portrait and two columns in
-landscape, so the landscape frame uses the full width instead of being a scaled-down
-portrait page.
+Date, a large clock, the current temperature with its icon and condition, today's range,
+the sun arc, and four days as columns. Portrait stacks them; landscape puts the clock,
+the temperature, and the arc in a left column and the four days in a right column.
 """
 
 from __future__ import annotations
@@ -10,176 +10,111 @@ from __future__ import annotations
 from datetime import datetime
 from typing import ClassVar
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from paperwhite_weather.config import Settings
-from paperwhite_weather.fonts import load_font
-from paperwhite_weather.models import WeatherSnapshot
-from paperwhite_weather.skins.base import (
-    BLACK,
-    CONDITION_LABELS,
-    DARK_GRAY,
-    LIGHT_GRAY,
-    WHITE,
-    fit_font,
-    format_clock,
-    format_temperature,
-)
-from paperwhite_weather.skins.sun_arc import draw_sun_arc
-from paperwhite_weather.skins.temperature_bars import draw_temperature_bars, rows_for_days
+from paperwhite_weather.models import DailyForecast, WeatherSnapshot
+from paperwhite_weather.skins.base import BLACK, DARK_GRAY, PALE_GRAY
+from paperwhite_weather.skins.common import Canvas
 
-#: The layout is designed for the Paperwhite 3 canvas (1072x1448 portrait, 1448x1072
-#: landscape) and scaled down uniformly when the actual canvas is smaller.
-_DESIGN_PORTRAIT = (1072, 1448)
-_DESIGN_LANDSCAPE = (1448, 1072)
 _FORECAST_DAYS = 4
 
 
 class MinimalSkin:
-    """Large typography, no icons yet, readable from across a room."""
+    """Large typography and one graphic, readable from across a room."""
 
     name: ClassVar[str] = "minimal"
 
     def compose(
-        self,
-        snapshot: WeatherSnapshot,
-        settings: Settings,
-        now: datetime,
-        size: tuple[int, int],
+        self, snapshot: WeatherSnapshot, settings: Settings, now: datetime, size: tuple[int, int]
     ) -> Image.Image:
         """See :meth:`paperwhite_weather.skins.base.Skin.compose`."""
-        width, height = size
-        image = Image.new("L", size, WHITE)
-        frame = _Frame(image, snapshot, settings, now)
-        if width > height:
-            frame.compose_landscape()
+        c = Canvas(size, snapshot, settings, now)
+        if c.landscape:
+            self._landscape(c)
         else:
-            frame.compose_portrait()
-        return image
+            self._portrait(c)
+        c.footer()
+        return c.image
 
+    def _portrait(self, c: Canvas) -> None:
+        m = c.margin
+        w = c.content_width
+        y = self._masthead(c, m, m, w, clock_size=220)
+        y = self._today(c, m, y + c.px(40), w, icon_size=250, temperature_size=250, wide=True)
+        y = c.sun_arc((m, y + c.px(24), c.width - m, y + c.px(24) + c.px(200)))
+        y = c.rule(m, y + c.px(36), w, PALE_GRAY, 3) + c.px(30)
+        c.day_columns((m, y, c.width - m, c.height - m - c.px(40)), self._days(c))
 
-class _Frame:
-    """One frame being drawn; holds the shared state the layout helpers need."""
+    def _landscape(self, c: Canvas) -> None:
+        m = c.margin
+        gutter = c.px(60)
+        column = round((c.content_width - gutter) * 0.5)
+        y = self._masthead(c, m, m, column, clock_size=190)
+        y = self._today(c, m, y + c.px(40), column, icon_size=210, temperature_size=210)
+        c.sun_arc((m, y + c.px(20), m + column, c.height - m - c.px(20)))
+        x = m + column + gutter
+        c.day_columns((x, m + c.px(10), c.width - m, c.height - m - c.px(50)), self._days(c))
 
-    def __init__(
+    # Blocks; each returns the y below what it drew.
+
+    def _masthead(self, c: Canvas, x: int, y: int, width: int, clock_size: int) -> int:
+        c.text((x, y), c.date_line(), "medium", 42, fill=DARK_GRAY, anchor="la", max_width=width)
+        y += c.px(56)
+        used = c.text((x - c.px(6), y), c.clock(), "bold", clock_size, anchor="la", max_width=width)
+        y += round(used * 1.18)
+        return c.rule(x, y, width, BLACK, 4)
+
+    def _today(
         self,
-        image: Image.Image,
-        snapshot: WeatherSnapshot,
-        settings: Settings,
-        now: datetime,
-    ) -> None:
-        self.draw = ImageDraw.Draw(image)
-        self.width, self.height = image.size
-        self.snapshot = snapshot
-        self.now = now
-        self.tz = snapshot.location.tzinfo
-        self.time_format = settings.display.time_format
-        design = _DESIGN_LANDSCAPE if self.width > self.height else _DESIGN_PORTRAIT
-        self.scale = min(self.width / design[0], self.height / design[1])
-        self.margin = round(0.06 * min(self.width, self.height))
+        c: Canvas,
+        x: int,
+        y: int,
+        width: int,
+        icon_size: int,
+        temperature_size: int,
+        wide: bool = False,
+    ) -> int:
+        """Icon, the temperature beside it, then the condition and today's range.
 
-    def px(self, design_px: float) -> int:
-        """Scale a design measurement to canvas pixels, never below one pixel."""
-        return max(1, round(design_px * self.scale))
-
-    # Layouts
-
-    def compose_portrait(self) -> None:
-        x = self.margin
-        content_width = self.width - 2 * self.margin
-        y = self.margin
-        y = self.masthead(x, y, content_width, clock_size=230)
-        y = self.rule(x, y, content_width, BLACK, 4)
-        y = self.lead(x, y + self.px(40), content_width)
-        y = self.sun_arc(x, y + self.px(30), content_width, self.px(250))
-        y = self.rule(x, y + self.px(30), content_width, LIGHT_GRAY, 2)
-        self.temperature_bars(x, y + self.px(24), content_width, long_names=True)
-        self.footer()
-
-    def compose_landscape(self) -> None:
-        gutter = self.px(60)
-        left_width = round((self.width - 2 * self.margin - gutter) * 0.45)
-        right_x = self.margin + left_width + gutter
-        right_width = self.width - self.margin - right_x
-
-        y = self.margin
-        y = self.masthead(self.margin, y, left_width, clock_size=250)
-        y = self.rule(self.margin, y, left_width, BLACK, 4)
-        y = self.lead(self.margin, y + self.px(50), left_width)
-        self.sun_arc(self.margin, y + self.px(70), left_width, self.px(300))
-
-        self.temperature_bars(right_x, self.margin + self.px(10), right_width)
-        self.footer()
-
-    # Building blocks; each returns the y coordinate below what it drew.
-
-    def masthead(self, x: int, y: int, width: int, clock_size: int) -> int:
-        self.draw.text(
-            (x, y),
-            f"{self.now:%A}, {self.now:%B} {self.now.day}",
-            font=load_font("bold", self.px(46)),
-            fill=BLACK,
+        The range goes on the same line as the condition, right-aligned, when ``wide``;
+        otherwise on the line below.
+        """
+        current = c.snapshot.current
+        icon = c.px(icon_size)
+        c.icon(current.condition, (x, y, x + icon, y + icon), night=c.night)
+        tx = x + icon + c.px(30)
+        c.text(
+            (tx - c.px(8), y - c.px(24)),
+            c.temperature(current.temperature),
+            "bold",
+            temperature_size,
             anchor="la",
+            max_width=width - icon - c.px(30),
         )
-        y += self.px(70)
-        clock = format_clock(self.now, self.time_format)
-        font = fit_font(self.draw, clock, "bold", self.px(clock_size), width)
-        self.draw.text((x, y), clock, font=font, fill=BLACK, anchor="la")
-        return y + round(font.size * 1.25)
-
-    def rule(self, x: int, y: int, width: int, fill: int, thickness: int) -> int:
-        self.draw.line([(x, y), (x + width, y)], fill=fill, width=self.px(thickness))
-        return y + self.px(thickness)
-
-    def lead(self, x: int, y: int, width: int) -> int:
-        """Current temperature with the condition and feels-like beside it."""
-        current = self.snapshot.current
-        temperature = format_temperature(current.temperature)
-        font = fit_font(self.draw, temperature, "bold", self.px(210), width * 0.5)
-        self.draw.text((x, y), temperature, font=font, fill=BLACK, anchor="la")
-        detail_x = x + round(self.draw.textlength(temperature, font=font)) + self.px(30)
-        detail_width = x + width - detail_x
-        lines = [(CONDITION_LABELS[current.condition], 56, BLACK)]
-        if current.feels_like is not None:
-            lines.append((f"Feels like {format_temperature(current.feels_like)}", 48, DARK_GRAY))
-        line_y = y + self.px(30)
-        for text, size, fill in lines:
-            line_font = fit_font(self.draw, text, "regular", self.px(size), detail_width)
-            self.draw.text((detail_x, line_y), text, font=line_font, fill=fill, anchor="la")
-            line_y += round(line_font.size * 1.4)
-        return max(y + round(font.size * 1.3), line_y)
-
-    def sun_arc(self, x: int, y: int, width: int, height: int) -> int:
-        """The day's sun arc: dawn to dusk, sun marked, sunrise and sunset labeled."""
-        draw_sun_arc(
-            self.draw,
-            (x, y, x + width, y + height),
-            self.snapshot.sun,
-            self.now,
-            self.tz,
-            self.time_format,
-            self.scale,
+        line_y = y + icon + c.px(10)
+        c.text(
+            (tx, line_y),
+            c.condition_label(current.condition),
+            "regular",
+            52,
+            anchor="la",
+            max_width=width - icon - c.px(30),
         )
-        return y + height
-
-    def temperature_bars(self, x: int, y: int, width: int, long_names: bool = False) -> int:
-        """Today and the next days as bars on one scale, down to the footer."""
-        rows = rows_for_days(self.snapshot, self.snapshot.daily[: _FORECAST_DAYS + 1], long_names)
-        bottom = self.height - self.margin - self.px(50)
-        draw_temperature_bars(self.draw, (x, y, x + width, bottom), rows, self.scale)
-        return bottom
-
-    def footer(self) -> None:
-        """Data freshness and units, bottom right, so stale data is obvious."""
-        snapshot = self.snapshot
-        text = (
-            f"Updated {format_clock(snapshot.fetched_at.astimezone(self.tz), self.time_format)}"
-            f"  ·  {snapshot.source}  ·  {snapshot.units.temperature_symbol}"
+        if wide:
+            c.text(
+                (x + width, line_y + c.px(4)),
+                c.range_text(c.snapshot.today),
+                "regular",
+                48,
+                fill=DARK_GRAY,
+                anchor="ra",
+            )
+            return line_y + c.px(66)
+        c.text(
+            (tx, line_y + c.px(64)), c.range_text(c.snapshot.today), "regular", 44, fill=DARK_GRAY
         )
-        self.draw.text(
-            (self.width - self.margin, self.height - self.margin),
-            text,
-            font=load_font("regular", self.px(28)),
-            fill=DARK_GRAY,
-            anchor="rd",
-        )
+        return line_y + c.px(64) + c.px(58)
+
+    def _days(self, c: Canvas) -> list[DailyForecast]:
+        return c.snapshot.daily[1 : _FORECAST_DAYS + 1]

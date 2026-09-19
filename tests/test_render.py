@@ -186,11 +186,11 @@ def test_minimal_landscape_is_two_columns(snapshot: WeatherSnapshot, settings: S
     settings = settings.model_copy(update={"display": display})
     width, height = display.canvas_size
     image = get_skin("minimal").compose(snapshot, settings, FIXED_NOW, (width, height))
-    # Gutter position mirrors MinimalSkin.compose_landscape: margin + 45% of the content
-    # width; probe a narrow strip there over the top 85% of the canvas (above the footer).
+    # Gutter position mirrors MinimalSkin._landscape: two equal columns around a gutter;
+    # probe a narrow strip there over the top 85% of the canvas (above the footer).
     margin = round(0.06 * min(width, height))
     gutter = round(60 * min(width / 1448, height / 1072))
-    left_width = round((width - 2 * margin - gutter) * 0.45)
+    left_width = round((width - 2 * margin - gutter) * 0.5)
     x = margin + left_width + gutter // 2
     strip = image.crop((x - 4, 0, x + 4, round(height * 0.85)))
     assert strip.getextrema() == (255, 255), "ink found in the gutter between the two columns"
