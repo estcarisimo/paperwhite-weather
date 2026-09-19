@@ -109,6 +109,23 @@ def test_marker_never_touches_the_values_at_the_bar_ends(current: float) -> None
 
 
 @pytest.mark.behaviour
+@pytest.mark.parametrize(("low", "high"), [(60, 60), (60, 61), (60, 63)])
+def test_marker_shrinks_on_a_flat_or_narrow_bar(low: float, high: float) -> None:
+    """A bar narrower than the marker gets a smaller marker; the values stay untouched."""
+    size = (600, 200)
+    rest = [TemperatureRow("Sat", 40, 90)]
+    plain = _render([TemperatureRow("Today", low, high), *rest], size)
+    marked = _render([TemperatureRow("Today", low, high, current=low), *rest], size)
+    assert marked.tobytes() != plain.tobytes(), "no marker drawn"
+    x_lo, x_hi = _bar_span(plain, 0, 2, size)
+    row = size[1] // 2
+    outside_left = (0, 20, x_lo - 1, 20 + row)
+    outside_right = (x_hi + 1, 20, plain.width, 20 + row)
+    assert marked.crop(outside_left).tobytes() == plain.crop(outside_left).tobytes()
+    assert marked.crop(outside_right).tobytes() == plain.crop(outside_right).tobytes()
+
+
+@pytest.mark.behaviour
 def test_narrow_boxes_drop_notes_then_icons_and_a_tiny_box_draws_nothing() -> None:
     """Whether notes or icons were drawn shows in whether removing them changes the frame."""
     no_notes = [replace(r, note=None) for r in ROWS]
