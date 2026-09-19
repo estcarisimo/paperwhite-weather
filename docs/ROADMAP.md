@@ -114,9 +114,11 @@ the refinement time goes, once the device runs unattended.
 
 The first versions read well; the direction is **fewer words, more pictures**.
 
-- [ ] **Sun times as a graphic**, not four labeled clocks: a horizon arc from civil dawn
+- [x] **Sun times as a graphic**, not four labeled clocks: a horizon arc from civil dawn
       to civil dusk with the sun's current position, sunrise and sunset marked, twilight
-      as gray bands. One icon-like element replaces "Dawn 6:12 AM  Sunrise 6:40 AM ...".
+      as gray bands. One icon-like element replaces "Dawn 6:12 AM  Sunrise 6:40 AM ..."
+      (2026-09-19, `skins/sun_arc.py`, in the four graphic skins; to be judged on the
+      panel).
 - [ ] **Temperature range as a scale**: today's low/high (and the forecast days') drawn
       as horizontal bars on a shared axis, with the current temperature marked, rather
       than "H 75°  L 57°" text. Aligned bars make the week comparable at a glance.

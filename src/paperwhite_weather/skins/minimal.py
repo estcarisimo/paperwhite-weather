@@ -1,4 +1,4 @@
-"""Minimal skin: a large clock and temperature, today's range, sun times, a compact forecast.
+"""Minimal skin: a large clock and temperature, today's range, the sun arc, a compact forecast.
 
 Two layouts share the same building blocks: a single column in portrait and two columns in
 landscape, so the landscape frame uses the full width instead of being a scaled-down
@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw
 
 from paperwhite_weather.config import Settings
 from paperwhite_weather.fonts import load_font
-from paperwhite_weather.models import DailyForecast, SunTimes, WeatherSnapshot
+from paperwhite_weather.models import DailyForecast, WeatherSnapshot
 from paperwhite_weather.skins.base import (
     BLACK,
     CONDITION_LABELS,
@@ -25,6 +25,7 @@ from paperwhite_weather.skins.base import (
     format_clock,
     format_temperature,
 )
+from paperwhite_weather.skins.sun_arc import draw_sun_arc
 
 #: The layout is designed for the Paperwhite 3 canvas (1072x1448 portrait, 1448x1072
 #: landscape) and scaled down uniformly when the actual canvas is smaller.
@@ -89,7 +90,7 @@ class _Frame:
         y = self.masthead(x, y, content_width, clock_size=230)
         y = self.rule(x, y, content_width, BLACK, 4)
         y = self.lead(x, y + self.px(40), content_width)
-        y = self.sun_line(x, y + self.px(20), content_width)
+        y = self.sun_arc(x, y + self.px(30), content_width, self.px(250))
         y = self.rule(x, y + self.px(30), content_width, LIGHT_GRAY, 2)
         self.forecast_columns(x, y + self.px(40), content_width)
         self.footer()
@@ -103,12 +104,11 @@ class _Frame:
         y = self.margin
         y = self.masthead(self.margin, y, left_width, clock_size=250)
         y = self.rule(self.margin, y, left_width, BLACK, 4)
-        self.lead(self.margin, y + self.px(50), left_width)
+        y = self.lead(self.margin, y + self.px(50), left_width)
+        self.sun_arc(self.margin, y + self.px(70), left_width, self.px(300))
 
-        y = self.margin
-        y = self.sun_block(right_x, y, right_width)
-        y = self.rule(right_x, y + self.px(30), right_width, LIGHT_GRAY, 2)
-        self.forecast_rows(right_x, y + self.px(30), right_width)
+        y = self.margin + self.px(20)
+        self.forecast_rows(right_x, y, right_width)
         self.footer()
 
     # Building blocks; each returns the y coordinate below what it drew.
@@ -160,40 +160,18 @@ class _Frame:
             line_y += round(line_font.size * 1.4)
         return max(y + round(font.size * 1.3), line_y)
 
-    def sun_events(self) -> list[tuple[str, str]]:
-        sun: SunTimes = self.snapshot.sun
-        return [
-            (label, format_clock(moment.astimezone(self.tz), self.time_format))
-            for label, moment in (
-                ("Dawn", sun.civil_dawn),
-                ("Sunrise", sun.sunrise),
-                ("Sunset", sun.sunset),
-                ("Dusk", sun.civil_dusk),
-            )
-        ]
-
-    def sun_line(self, x: int, y: int, width: int) -> int:
-        """All four sun events on one line (portrait)."""
-        text = "   ".join(f"{label} {clock}" for label, clock in self.sun_events())
-        font = fit_font(self.draw, text, "regular", self.px(34), width)
-        self.draw.text((x, y), text, font=font, fill=BLACK, anchor="la")
-        return y + round(font.size * 1.5)
-
-    def sun_block(self, x: int, y: int, width: int) -> int:
-        """Sun events as a two-by-two grid (landscape)."""
-        self.draw.text((x, y), "Sun", font=load_font("bold", self.px(40)), fill=BLACK, anchor="la")
-        y += self.px(60)
-        column = width / 2
-        label_font = load_font("regular", self.px(30))
-        value_font = load_font("bold", self.px(44))
-        for index, (label, clock) in enumerate(self.sun_events()):
-            cell_x = x + round(column * (index % 2))
-            cell_y = y + self.px(105) * (index // 2)
-            self.draw.text((cell_x, cell_y), label, font=label_font, fill=DARK_GRAY, anchor="la")
-            self.draw.text(
-                (cell_x, cell_y + self.px(34)), clock, font=value_font, fill=BLACK, anchor="la"
-            )
-        return y + self.px(105) * 2
+    def sun_arc(self, x: int, y: int, width: int, height: int) -> int:
+        """The day's sun arc: dawn to dusk, sun marked, sunrise and sunset labeled."""
+        draw_sun_arc(
+            self.draw,
+            (x, y, x + width, y + height),
+            self.snapshot.sun,
+            self.now,
+            self.tz,
+            self.time_format,
+            self.scale,
+        )
+        return y + height
 
     def upcoming(self) -> list[DailyForecast]:
         return self.snapshot.daily[1 : _FORECAST_DAYS + 1]
