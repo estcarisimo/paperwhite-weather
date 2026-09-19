@@ -167,6 +167,7 @@ stop the framework or keep repainting.
 | `screenSaverTimeout` does not exist on this firmware (`lipcErrNoSuchProperty`) | `lipc-get-prop com.lab126.powerd screenSaverTimeout` |
 | A shell trap cannot run while the shell waits on the touch read, so `stop` kills the loop's session (`setsid`, `kill -TERM -- -PID`) and does the restore itself | first `stop` implementation left the GUI stopped; fixed and re-tested |
 | Backgrounding a function inherits the parent's `$$`, so the loop runs as `paperwhite.sh loop` under `setsid` and writes its own PID | first `start` wrote a dead PID; fixed and re-tested |
+| Bad numeric config values (`REFRESH_MINUTES="fifteen"`, `FULL_REFRESH_EVERY="0"`, empty, `x`) fall back to the defaults with a log line instead of aborting ash (divide by zero) or busy-looping | run under `busybox ash` on the Pi with a patched `BASE`; reviewer reproduced the crash on the previous revision |
 | Discovery: `http://smokingpi.lan:8765` answered `/health` on the first candidate; `wget` of `/dashboard/landscape.png` took under a second | `sh -x paperwhite.sh once` |
 | `ip route`, `awk`, `timeout`, `dd`, `setsid`, `nohup`, `evemu-event`, `fbgrab` present | `which`; `evemu`/`fbgrab` come with USBNetwork |
 | `fbgrab /mnt/us/screen.png` captures the panel as a 1072x1448 PNG | run over SSH |

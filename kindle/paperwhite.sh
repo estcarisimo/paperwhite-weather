@@ -41,11 +41,25 @@ log() {
     fi
 }
 
+positive_int_or() {
+    # $1: value, $2: default. Echoes $1 if it is a whole number >= 1, else $2 (and logs).
+    case "$1" in
+        ''|*[!0-9]*|0*) log "config: invalid number '$1', using $2"; printf '%s\n' "$2" ;;
+        *) printf '%s\n' "$1" ;;
+    esac
+}
+
 load_config() {
     mkdir -p "$STATE" "$CACHE"
     # shellcheck disable=SC1090
     [ -f "$CONFIG" ] && . "$CONFIG"
     [ -n "$PAPERWHITE_SERVER" ] && SERVER_HOST="$PAPERWHITE_SERVER"
+    # Arithmetic on a bad value would abort ash (divide by zero) or busy-loop (non-number).
+    REFRESH_MINUTES="$(positive_int_or "$REFRESH_MINUTES" 15)"
+    FULL_REFRESH_EVERY="$(positive_int_or "$FULL_REFRESH_EVERY" 4)"
+    TAP_WINDOW_SECONDS="$(positive_int_or "$TAP_WINDOW_SECONDS" 60)"
+    SERVER_PORT="$(positive_int_or "$SERVER_PORT" 8765)"
+    case "$FRONTLIGHT" in ''|*[!0-9]*) FRONTLIGHT="0" ;; esac
     ORIENTATION="$(cat "$STATE/orientation" 2>/dev/null)"
     case "$ORIENTATION" in
         landscape|portrait) ;;
@@ -75,6 +89,7 @@ scan_subnet() {
     gateway="$(ip route 2>/dev/null | awk '/^default/ {print $3; exit}')"
     [ -n "$gateway" ] || return 1
     prefix="${gateway%.*}"
+    rm -f "$STATE/scan_hit"  # a scan interrupted by stop could leave a stale hit behind
     i=1
     while [ "$i" -le 254 ]; do
         j=0
