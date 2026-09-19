@@ -154,12 +154,28 @@ stop the framework or keep repainting.
 | FBInk | `/usr/bin/fbink` (usbnet) | Optional alternative to `eips`; the usbnet build crashed on `-e`, so `eips` is the tool for now |
 | `powerd` | via lipc | Must be told not to blank the screen or suspend on its own (Sprint 3) |
 
-Still open for Sprint 3: whether the stock GUI repaints over our frame and how to stop it
-(`stop framework` vs. painting on top), screensaver suppression, suspend and RTC wake, and
-the rotation direction of the landscape frame as mounted on the wall.
+## Client behavior verified on 2026-09-19 (`kindle/paperwhite.sh`, over SSH)
 
-Anything in `kindle/` is a **draft** until it has been run on the device, and its header
-says so.
+| Fact | Evidence |
+| --- | --- |
+| `stop framework` stops the stock GUI (`initctl list` → `framework stop/waiting`); `lab126_gui`, `pillow`, `x`, `powerd`, `wifid` keep running; Wi-Fi stays `CONNECTED` | `initctl list`, `lipc-get-prop com.lab126.wifid cmState` after the stop |
+| With the GUI stopped, `eips -g` paints and the frame stays on the panel; nothing repaints over it | framebuffer capture with `fbgrab` 15 minutes later matched the served frame |
+| Touch events still arrive on `/dev/input/event1` with the GUI stopped | `timeout 60 dd if=/dev/input/event1 bs=16 count=1` returned on a synthetic tap |
+| A tap toggles orientation and repaints: landscape → portrait → landscape | two `evemu-event ... BTN_TOUCH` injections; `paperwhite.log` shows both toggles, `state/orientation` follows |
+| Frontlight is `com.lab126.powerd flIntensity` (0–24); it was at 22 with the GUI stopped and no way to reach the slider, so the client sets it to `FRONTLIGHT` (0) on start and restores the saved level on stop | `lipc-get-prop`/`lipc-set-prop com.lab126.powerd flIntensity` |
+| `preventScreenSaver` 1/0 is honored | `lipc-get-prop com.lab126.powerd preventScreenSaver` after start/stop |
+| `screenSaverTimeout` does not exist on this firmware (`lipcErrNoSuchProperty`) | `lipc-get-prop com.lab126.powerd screenSaverTimeout` |
+| A shell trap cannot run while the shell waits on the touch read, so `stop` kills the loop's session (`setsid`, `kill -TERM -- -PID`) and does the restore itself | first `stop` implementation left the GUI stopped; fixed and re-tested |
+| Backgrounding a function inherits the parent's `$$`, so the loop runs as `paperwhite.sh loop` under `setsid` and writes its own PID | first `start` wrote a dead PID; fixed and re-tested |
+| Discovery: `http://smokingpi.lan:8765` answered `/health` on the first candidate; `wget` of `/dashboard/landscape.png` took under a second | `sh -x paperwhite.sh once` |
+| `ip route`, `awk`, `timeout`, `dd`, `setsid`, `nohup`, `evemu-event`, `fbgrab` present | `which`; `evemu`/`fbgrab` come with USBNetwork |
+| `fbgrab /mnt/us/screen.png` captures the panel as a 1072x1448 PNG | run over SSH |
+
+Still open: suspend and RTC wake between refreshes (the loop currently keeps the device
+awake with Wi-Fi on; overnight battery measurement started 2026-09-19 01:53 UTC at 95 %),
+start at boot, and the rotation direction of the landscape frame as physically mounted.
+
+`kindle/install.sh` is still a **draft**; the client was installed over SSH.
 
 ## Handling notes
 

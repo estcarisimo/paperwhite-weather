@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<extension>
+  <information>
+    <name>Paperwhite Weather</name>
+    <version>0.1.0</version>
+    <author>Esteban Carisimo</author>
+    <id>paperwhite-weather</id>
+  </information>
+  <menus>
+    <menu type="json" dynamic="true">menu.json</menu>
+  </menus>
+</extension>

@@ -70,18 +70,21 @@ Done when: the Pi serves a live frame that updates on schedule and survives an A
 
 Goal: the dashboard runs unattended on the wall.
 
-- [ ] `kindle/paperwhite.sh`: discover the server (config → `.lan` → `.local` → scan),
-      fetch the image for the current orientation, display, periodic full clear against
-      ghosting, RTC wake and suspend, Wi-Fi handling, fallback to the cached image.
-- [ ] Tap to toggle orientation, persisted on the device.
-- [ ] Keep our frame on screen: stop the stock GUI or repaint over it; suppress the
-      screensaver (`preventScreenSaver`).
+- [x] `kindle/paperwhite.sh`: discover the server (config → last known → `.lan` →
+      `.local` → bare → scan), fetch the image for the current orientation, display,
+      periodic full clear against ghosting, fallback to the cached image (2026-09-19).
+- [ ] RTC wake and suspend between refreshes (after the battery measurement).
+- [x] Tap to toggle orientation, persisted on the device (2026-09-19, synthetic taps).
+- [x] Keep our frame on screen: `stop framework`; `preventScreenSaver 1`; frontlight off
+      and restored on stop (2026-09-19).
 - [ ] Portrait frame on the panel; confirm the landscape rotation direction as mounted.
 - [ ] Measure Wi-Fi reconnect time, RTC wake from suspend (`/sys/class/rtc/rtc0/wakealarm`),
       and idle battery drain over a night, before the week-long run.
 - [ ] Readability of the `minimal` skin from across a room, once the frame stays up;
       adjust type sizes.
-- [ ] KUAL extension to start/stop it; install instructions verified on the device.
+- [x] KUAL extension (Start, Stop, Show one frame, Toggle, Status) installed; `install.sh`
+      over USB still a draft (installed over SSH instead).
+- [ ] Start at boot.
 - [ ] Battery measurement over a week at 15-minute refresh; decide on the clock question.
 - [ ] Photos of the device for the README.
 

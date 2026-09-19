@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "name": "Paperwhite Weather",
+      "priority": 1,
+      "items": [
+        {"name": "Start dashboard", "priority": 1, "action": "./bin/start.sh"},
+        {"name": "Stop dashboard (back to Kindle)", "priority": 2, "action": "./bin/stop.sh"},
+        {"name": "Show one frame now", "priority": 3, "action": "./bin/once.sh"},
+        {"name": "Toggle orientation", "priority": 4, "action": "./bin/toggle.sh"},
+        {"name": "Status", "priority": 5, "action": "./bin/status.sh"}
+      ]
+    }
+  ]
+}

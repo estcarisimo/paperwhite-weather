@@ -48,7 +48,8 @@ src/paperwhite_weather/
 tests/              pytest; conftest.py has the example-config and fixed-snapshot fixtures;
                     fixtures/ holds a recorded Open-Meteo response (metric, Chicago)
 deploy/             systemd user unit and Avahi service file for the Raspberry Pi
-kindle/             device-side shell scripts (Sprint 3; empty until then)
+kindle/             paperwhite.sh (client, verified on the device), config.example,
+                    extensions/paperwhite (KUAL), install.sh (draft); ShellCheck in CI
 docs/               ARCHITECTURE.md, DEVICE.md, DEPLOY.md, ROADMAP.md, REPOSITORY_STATE.md
 config.example.yaml Example configuration; real config.yaml is git-ignored
 ```
@@ -113,6 +114,11 @@ uv build                                    # sdist + wheel via uv_build
   added to the matching template in the same PR.
 - Documented commands are run before they are written down. Kindle-side commands that
   have not been run on the device are labeled **draft** in `docs/DEVICE.md`.
+- Kindle scripts are POSIX `sh` for BusyBox `ash` (no bashisms; `shellcheck -s sh` in
+  CI). Test on the device over SSH (`root@<kindle-ip>`, key auth; find the IP by scanning
+  port 22). A synthetic tap is `evemu-event /dev/input/event1 --type EV_KEY --code
+  BTN_TOUCH --value 1 --sync` (then `--value 0`); `fbgrab file.png` captures the panel.
+  Remember that `stop framework` makes the Kindle's own controls unreachable until `stop`.
 
 ## Things that are easy to get wrong
 

@@ -32,6 +32,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - `.env.example` documenting those variables and their built-in defaults
   (`config.yaml` in the working directory, `mock`, `0.0.0.0`, `8765`); the systemd unit
   loads a git-ignored `.env`, a manual `paperwhite serve` does not.
+- `kindle/paperwhite.sh`, the Kindle client: server discovery, fetch, `eips` paint with
+  periodic full clears, tap to toggle orientation, stock GUI stopped and restored,
+  screensaver and frontlight handled; `kindle/config.example`; KUAL extension; a draft
+  USB installer. ShellCheck runs on all of it in CI.
 - `deploy/`: systemd user unit (configured through those variables and an optional
   `.env`) and Avahi service file; `docs/DEPLOY.md` with the steps
   verified on the Raspberry Pi.

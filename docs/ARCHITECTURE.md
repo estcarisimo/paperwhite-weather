@@ -168,16 +168,18 @@ ShellCheck in CI from Sprint 3. Writing our own native display code is out of sc
 
 ## Kindle side (design; the client script is Sprint 3)
 
-A shell script started from KUAL (the jailbreak launcher) loops:
+`kindle/paperwhite.sh`, started from KUAL or over SSH, stops the stock GUI, disables the
+screensaver and frontlight, and loops:
 
-1. Ensure Wi-Fi is up; `wget` the PNG from the service (fall back to the cached copy on
-   failure).
-2. `eips -c` (optional full clear to fight ghosting, every N refreshes) then `eips -g
-   dashboard.png` to paint the frame.
-3. Schedule an RTC wake-up for `refresh_minutes` later and suspend.
+1. Discover the server (see below) and `wget` the PNG for the current orientation; on
+   failure keep the cached copy.
+2. `eips -c` every N refreshes to fight ghosting, then `eips -g` to paint the frame.
+3. Wait `REFRESH_MINUTES`, reading the touch device meanwhile; a tap toggles the
+   orientation and repaints at once.
 
-Whether the device can be suspended and woken by RTC reliably on this firmware, and how
-long Wi-Fi takes to reconnect, are the main unknowns; `docs/DEVICE.md` tracks them.
+Verified on the device on 2026-09-19 (`docs/DEVICE.md`). Suspend with RTC wake between
+refreshes is not implemented; the device stays awake with Wi-Fi on, and an overnight
+battery measurement decides whether that is acceptable.
 
 ## Open questions and current recommendations
 

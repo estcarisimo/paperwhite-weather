@@ -1,0 +1,24 @@
+# Paperwhite Weather client configuration. Copy to /mnt/us/paperwhite/config on the Kindle.
+# Shell syntax: KEY="value", no spaces around "=".
+
+# Hostname of the machine running `paperwhite serve`. The client tries
+# http://<host>.lan:<port>, then .local, then the bare name; with no host it scans the subnet.
+SERVER_HOST="myserver"
+SERVER_PORT="8765"
+
+# Or skip discovery entirely with a full base URL (no trailing slash).
+#SERVER_URL="http://192.168.1.10:8765"
+
+# Minutes between frames. Wi-Fi stays on; measure battery before going lower.
+REFRESH_MINUTES="15"
+
+# Every N frames, clear the panel first (a full refresh removes ghosting; it flashes).
+FULL_REFRESH_EVERY="4"
+
+# Stop the stock Kindle GUI while the dashboard runs ("yes"), so it cannot repaint over
+# the frame. "stop" from KUAL (or `paperwhite.sh stop`) starts it again.
+STOP_FRAMEWORK="yes"
+
+# Frontlight level while the dashboard runs (0 = off; the Paperwhite 3 goes up to 24).
+# The reader's own level is saved when the dashboard starts and restored when it stops.
+FRONTLIGHT="0"
