@@ -17,6 +17,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Tested on a recorded response and a local stub server, never against the live API.
 - Civil dawn/dusk and sunrise/sunset computed locally with `astral`, pinned to a US Naval
   Observatory table.
+- Hourly forecast in the data model (`HourlyForecast`: temperature, condition,
+  precipitation probability, wind) from local midnight of today, five days long; the
+  `open-meteo` provider requests it and the `mock` provider synthesizes a plausible day.
+  The recorded Open-Meteo fixture was refreshed (2026-09-19) to include the hourly block.
 - `minimal` skin: large clock and temperature, today's range, the sun arc, and a
   four-day forecast. Portrait is a single column; landscape is a two-column layout that
   uses the full width.

@@ -11,6 +11,7 @@ from paperwhite_weather.models import (
     Condition,
     CurrentConditions,
     DailyForecast,
+    HourlyForecast,
     SunTimes,
     WeatherSnapshot,
     require_aware,
@@ -51,6 +52,28 @@ def _snapshot(**overrides: object) -> WeatherSnapshot:
     }
     fields.update(overrides)
     return WeatherSnapshot.model_validate(fields)
+
+
+def _hour(offset: int) -> HourlyForecast:
+    return HourlyForecast(
+        time=datetime(2026, 9, 18, 0, 0, tzinfo=CHICAGO) + timedelta(hours=offset),
+        temperature=12.0,
+        condition=Condition.CLOUDY,
+    )
+
+
+def test_hourly_defaults_to_empty_and_must_be_ascending_and_unique() -> None:
+    assert _snapshot().hourly == []
+    assert len(_snapshot(hourly=[_hour(0), _hour(1)]).hourly) == 2
+    with pytest.raises(ValidationError, match="ascending"):
+        _snapshot(hourly=[_hour(1), _hour(0)])
+    with pytest.raises(ValidationError, match="ascending"):
+        _snapshot(hourly=[_hour(0), _hour(0)])
+
+
+def test_hourly_time_must_be_aware() -> None:
+    with pytest.raises(ValidationError, match="timezone-aware"):
+        HourlyForecast(time=datetime(2026, 9, 18, 0, 0), temperature=1.0, condition=Condition.FOG)
 
 
 def test_require_aware_rejects_naive() -> None:

@@ -30,7 +30,8 @@ first upload.
 ```
 src/paperwhite_weather/
   config.py         Pydantic settings: Location, Units, Display, Settings; load_settings(path)
-  models.py         WeatherSnapshot, CurrentConditions, DailyForecast, SunTimes, Condition
+  models.py         WeatherSnapshot, CurrentConditions, DailyForecast, HourlyForecast, SunTimes,
+                    Condition
   units.py          celsius_to_fahrenheit, kmh_to_mph, kmh_to_ms
   fonts.py          load_font(weight, size): "regular"/"bold" (DejaVu Sans), "serif"/"serif-bold"
                     (DejaVu Serif), bundled in assets/fonts/
@@ -152,9 +153,10 @@ uv build                                    # sdist + wheel via uv_build
   (`src/paperwhite_weather/assets/fonts/LICENSE-DejaVu.txt`). Adding another typeface
   needs a license check and the license file next to it.
 - `MockProvider` builds "today" from the location's local date, not the UTC date.
-- Open-Meteo returns local-time strings without an offset (`2026-09-18T06:33`); only the
-  daily `time` dates are used, and sun times come from `astral`, so no naive datetime
-  ever reaches the model. WMO codes not in `WMO_CONDITIONS` map to `Condition.UNKNOWN`
+- Open-Meteo returns local-time strings without an offset (`2026-09-18T06:33`); the
+  daily `time` values are used as dates, the hourly ones are made aware with the
+  location's `tzinfo` in `_parse_hourly`, and sun times come from `astral`, so no naive
+  datetime ever reaches the model. Hours whose temperature is `null` are dropped. WMO codes not in `WMO_CONDITIONS` map to `Condition.UNKNOWN`
   (shown as a dash), never raise.
 - `render_dashboard` verifies the skin's output size and raises; do not catch that.
 - The existing Kindle dashboard projects listed in `README.md` are prior art to study,

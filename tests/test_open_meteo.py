@@ -5,6 +5,7 @@ import threading
 from collections.abc import Callable, Iterator
 from datetime import date, datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from itertools import pairwise
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -22,9 +23,9 @@ from paperwhite_weather.providers.open_meteo import (
     parse_forecast,
 )
 
-FIXTURE = Path(__file__).parent / "fixtures" / "open_meteo_chicago_2026-09-18.json"
+FIXTURE = Path(__file__).parent / "fixtures" / "open_meteo_chicago_2026-09-19.json"
 CHICAGO = Location(latitude=41.8781, longitude=-87.6298, timezone="America/Chicago")
-FETCHED = datetime(2026, 9, 19, 0, 45, tzinfo=timezone.utc)
+FETCHED = datetime(2026, 9, 19, 22, 3, tzinfo=timezone.utc)
 
 
 @pytest.fixture
@@ -47,28 +48,30 @@ def test_build_query_requests_every_field_in_the_configured_units() -> None:
         assert field in query["current"].split(",")
     for field in ("weather_code", "temperature_2m_max", "temperature_2m_min"):
         assert field in query["daily"].split(",")
+    for field in ("temperature_2m", "weather_code", "precipitation_probability", "wind_speed_10m"):
+        assert field in query["hourly"].split(",")
     assert build_query(CHICAGO, Units(wind="ms"))["wind_speed_unit"] == "ms"
 
 
 @pytest.mark.behaviour
 def test_parse_recorded_response(payload: dict[str, object]) -> None:
-    """Pins the normalization of a real response recorded on 2026-09-18 (metric units)."""
+    """Pins the normalization of a real response recorded on 2026-09-19 (metric units)."""
     snapshot = parse_forecast(payload, CHICAGO, Units(), fetched_at=FETCHED)
     assert snapshot.source == "open-meteo"
     assert snapshot.fetched_at == FETCHED
-    assert snapshot.current.temperature == 18.0
-    assert snapshot.current.feels_like == 17.9
-    assert snapshot.current.humidity_percent == 79.0
-    assert snapshot.current.wind_speed == 10.8
+    assert snapshot.current.temperature == 19.4
+    assert snapshot.current.feels_like == 21.7
+    assert snapshot.current.humidity_percent == 96.0
+    assert snapshot.current.wind_speed == 6.9
     assert snapshot.current.condition is Condition.CLOUDY  # WMO 3
-    assert snapshot.current.precipitation_probability == 3.0
-    assert [day.date for day in snapshot.daily] == [date(2026, 9, 18 + i) for i in range(5)]
+    assert snapshot.current.precipitation_probability == 31.0
+    assert [day.date for day in snapshot.daily] == [date(2026, 9, 19 + i) for i in range(5)]
     assert [day.condition for day in snapshot.daily] == [
+        Condition.RAIN,
+        Condition.RAIN,
+        Condition.RAIN,
         Condition.CLOUDY,
-        Condition.RAIN,
-        Condition.RAIN,
         Condition.DRIZZLE,
-        Condition.CLOUDY,
     ]
     today = snapshot.today
     assert (today.temperature_low, today.temperature_high) == (
@@ -84,6 +87,35 @@ def test_parse_recorded_response(payload: dict[str, object]) -> None:
     assert abs(snapshot.sun.sunset.replace(tzinfo=None) - api_sunset) <= timedelta(minutes=1)
     assert snapshot.sun.civil_dawn < snapshot.sun.sunrise
     assert snapshot.sun.sunset < snapshot.sun.civil_dusk
+
+
+@pytest.mark.behaviour
+def test_parse_recorded_hourly(payload: dict[str, object]) -> None:
+    """Hourly rows are local midnight onward, made aware with the location's zone."""
+    snapshot = parse_forecast(payload, CHICAGO, Units(), fetched_at=FETCHED)
+    assert len(snapshot.hourly) == 120  # 5 days x 24 hours
+    first = snapshot.hourly[0]
+    assert first.time == datetime(2026, 9, 19, 0, 0, tzinfo=CHICAGO.tzinfo)
+    assert first.time.utcoffset() == timedelta(hours=-5)
+    assert first.temperature == 18.7
+    assert first.condition is Condition.CLEAR  # WMO 0
+    assert first.precipitation_probability == 5.0
+    assert first.wind_speed == 18.4
+    assert snapshot.hourly[1].condition is Condition.CLOUDY  # WMO 3
+    assert snapshot.hourly[-1].time == datetime(2026, 9, 23, 23, 0, tzinfo=CHICAGO.tzinfo)
+    assert all(a.time < b.time for a, b in pairwise(snapshot.hourly))
+
+
+def test_hours_without_a_temperature_are_skipped(payload: dict[str, object]) -> None:
+    hourly = payload["hourly"]
+    assert isinstance(hourly, dict)
+    hourly["temperature_2m"][-2:] = [None, None]
+    hourly["precipitation_probability"][0] = None
+    hourly["wind_speed_10m"][0] = None
+    snapshot = parse_forecast(payload, CHICAGO, Units(), fetched_at=FETCHED)
+    assert len(snapshot.hourly) == 118
+    assert snapshot.hourly[0].precipitation_probability is None
+    assert snapshot.hourly[0].wind_speed is None
 
 
 @pytest.mark.parametrize(
@@ -128,6 +160,11 @@ def test_every_documented_wmo_code_is_mapped() -> None:
         lambda p: p["daily"]["time"].__setitem__(0, "not-a-date"),
         lambda p: p["daily"]["temperature_2m_min"].__setitem__(1, None),
         lambda p: p["current"].pop("temperature_2m"),
+        lambda p: p.pop("hourly"),
+        lambda p: p["hourly"].pop("wind_speed_10m"),
+        lambda p: p["hourly"]["time"].pop(),
+        lambda p: p["hourly"]["time"].__setitem__(0, "2026-09-19T00:00+00:00"),
+        lambda p: p["hourly"]["time"].__setitem__(0, "noon"),
     ],
 )
 def test_malformed_responses_raise(

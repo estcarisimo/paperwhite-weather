@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import pytest
 
 from paperwhite_weather.config import Location, Units
+from paperwhite_weather.models import Condition
 from paperwhite_weather.providers import available_providers, get_provider
 from paperwhite_weather.providers.mock import MockProvider
 from paperwhite_weather.units import celsius_to_fahrenheit, kmh_to_mph, kmh_to_ms
@@ -39,6 +40,23 @@ def test_mock_uses_local_date_for_today() -> None:
     assert len(snapshot.daily) == 5
     assert snapshot.sun.sunrise.date().isoformat() == "2026-09-18"
     assert snapshot.sun.sunrise.tzinfo is not None
+
+
+def test_mock_hourly_covers_every_day_within_its_range() -> None:
+    snapshot = MockProvider(now=FIXED_NOW).fetch(LOCATION, Units())
+    assert len(snapshot.hourly) == 24 * len(snapshot.daily)
+    first = snapshot.hourly[0]
+    assert first.time == datetime(2026, 9, 18, 0, 0, tzinfo=LOCATION.tzinfo)
+    by_date = {day.date: day for day in snapshot.daily}
+    for hour in snapshot.hourly:
+        day = by_date[hour.time.date()]
+        assert day.temperature_low <= hour.temperature <= day.temperature_high
+        assert hour.wind_speed is not None and hour.wind_speed > 0
+        assert hour.precipitation_probability is not None
+    afternoon = [h for h in snapshot.hourly if h.time.date() == snapshot.daily[1].date]
+    assert afternoon[15].condition is snapshot.daily[1].condition  # rain day, rain hour
+    assert afternoon[3].condition is Condition.CLOUDY  # rain day, dry hour
+    assert max(h.temperature for h in afternoon) == snapshot.daily[1].temperature_high
 
 
 def test_mock_rejects_naive_now() -> None:
