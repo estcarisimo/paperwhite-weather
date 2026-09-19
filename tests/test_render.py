@@ -17,11 +17,50 @@ def _gray_levels(image: Image.Image) -> set[int]:
     return {value for _count, value in image.getcolors(256) or []}
 
 
-def test_registry_lists_minimal() -> None:
-    assert available_skins() == ["minimal"]
+def test_registry_lists_every_skin() -> None:
+    assert available_skins() == ["big-clock", "forecast", "minimal", "newspaper", "weather-station"]
     assert get_skin("minimal").name == "minimal"
-    with pytest.raises(ValueError, match="available: minimal"):
+    with pytest.raises(ValueError, match="available: big-clock, forecast, minimal"):
         get_skin("nope")
+
+
+@pytest.mark.parametrize("skin", ["big-clock", "forecast", "newspaper", "weather-station"])
+@pytest.mark.parametrize("orientation", ["portrait", "landscape"])
+def test_new_skins_keep_margins_clear_and_handle_sparse_data(
+    snapshot: WeatherSnapshot, settings: Settings, skin: str, orientation: str
+) -> None:
+    """The outer 1.5 % border stays white, and a snapshot with no optional data renders."""
+    display = settings.display.model_copy(update={"skin": skin, "orientation": orientation})
+    settings = settings.model_copy(update={"display": display})
+    width, height = display.canvas_size
+    image = get_skin(skin).compose(snapshot, settings, FIXED_NOW, (width, height))
+    border = round(0.015 * min(width, height))
+    for box in (
+        (0, 0, width, border),
+        (0, height - border, width, height),
+        (0, 0, border, height),
+        (width - border, 0, width, height),
+    ):
+        assert image.crop(box).getextrema() == (255, 255), f"{skin} {orientation}: ink in {box}"
+    sparse_current = snapshot.current.model_copy(
+        update={
+            "feels_like": None,
+            "humidity_percent": None,
+            "wind_speed": None,
+            "precipitation_probability": None,
+        }
+    )
+    sparse = snapshot.model_copy(
+        update={
+            "current": sparse_current,
+            "daily": [snapshot.daily[0].model_copy(update={"precipitation_probability": None})],
+            "location": snapshot.location.model_copy(update={"name": None}),
+        }
+    )
+    assert get_skin(skin).compose(sparse, settings, FIXED_NOW, (width, height)).size == (
+        width,
+        height,
+    )
 
 
 @pytest.mark.parametrize("orientation", ["portrait", "landscape"])

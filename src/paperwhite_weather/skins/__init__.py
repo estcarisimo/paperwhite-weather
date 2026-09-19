@@ -5,10 +5,18 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from paperwhite_weather.skins.base import Skin
+from paperwhite_weather.skins.big_clock import BigClockSkin
+from paperwhite_weather.skins.forecast import ForecastSkin
 from paperwhite_weather.skins.minimal import MinimalSkin
+from paperwhite_weather.skins.newspaper import NewspaperSkin
+from paperwhite_weather.skins.weather_station import WeatherStationSkin
 
 _FACTORIES: dict[str, Callable[[], Skin]] = {
     MinimalSkin.name: MinimalSkin,
+    NewspaperSkin.name: NewspaperSkin,
+    WeatherStationSkin.name: WeatherStationSkin,
+    BigClockSkin.name: BigClockSkin,
+    ForecastSkin.name: ForecastSkin,
 }
 
 
@@ -34,4 +42,13 @@ def get_skin(name: str) -> Skin:
     return factory()
 
 
-__all__ = ["MinimalSkin", "Skin", "available_skins", "get_skin"]
+__all__ = [
+    "BigClockSkin",
+    "ForecastSkin",
+    "MinimalSkin",
+    "NewspaperSkin",
+    "Skin",
+    "WeatherStationSkin",
+    "available_skins",
+    "get_skin",
+]

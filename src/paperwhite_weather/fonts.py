@@ -1,6 +1,6 @@
 """Bundled typefaces so rendering is identical on every machine and in CI.
 
-DejaVu Sans is redistributed under the Bitstream Vera license; see
+DejaVu Sans and DejaVu Serif are redistributed under the Bitstream Vera license; see
 ``assets/fonts/LICENSE-DejaVu.txt``.
 """
 
@@ -12,11 +12,13 @@ from typing import Literal
 
 from PIL import ImageFont
 
-Weight = Literal["regular", "bold"]
+Weight = Literal["regular", "bold", "serif", "serif-bold"]
 
 _FILES: dict[Weight, str] = {
     "regular": "DejaVuSans.ttf",
     "bold": "DejaVuSans-Bold.ttf",
+    "serif": "DejaVuSerif.ttf",
+    "serif-bold": "DejaVuSerif-Bold.ttf",
 }
 
 
@@ -27,7 +29,8 @@ def load_font(weight: Weight, size: int) -> ImageFont.FreeTypeFont:
     Parameters
     ----------
     weight
-        ``"regular"`` or ``"bold"``.
+        ``"regular"``, ``"bold"`` (DejaVu Sans), ``"serif"``, or ``"serif-bold"``
+        (DejaVu Serif).
     size
         Font size in pixels; must be positive.
 

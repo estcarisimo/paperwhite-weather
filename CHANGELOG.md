@@ -18,8 +18,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - Civil dawn/dusk and sunrise/sunset computed locally with `astral`, pinned to a US Naval
   Observatory table.
 - `minimal` skin: large clock and temperature, today's range, sun events, and a
-  four-day forecast. Text only; icons are planned. Portrait is a single column;
-  landscape is a two-column layout that uses the full width.
+  four-day forecast. Portrait is a single column; landscape is a two-column layout that
+  uses the full width.
+- Four more skins, each with portrait and landscape layouts: `newspaper` (serif front
+  page), `weather-station` (metrics grid), `big-clock`, and `forecast`. Shared drawing
+  helpers in `skins/common.py`; DejaVu Serif bundled alongside DejaVu Sans.
+- Monochrome weather icons drawn with Pillow primitives for every condition.
+- `paperwhite gallery` renders every skin in both orientations; CI uploads the result.
+  Golden-image tests in `tests/goldens/` pin each frame.
 - `--orientation` option on `paperwhite render` to override the configured orientation.
 - Renderer that composes a skin at the Kindle Paperwhite 3 native size (1072x1448),
   supports portrait and landscape, and quantizes to 16 gray levels.

@@ -78,12 +78,16 @@ jobs:
       - name: CLI smoke test
         run: uv run paperwhite render --config config.example.yaml --provider mock --output dashboard.png
 
-      - name: Upload the rendered dashboard
+      - name: Render every skin in both orientations
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: uv run paperwhite gallery --config config.example.yaml --provider mock --output-dir gallery --now 2026-09-18T21:45:00+00:00
+
+      - name: Upload the rendered skins
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
-          name: dashboard-minimal
-          path: dashboard.png
+          name: skins-gallery
+          path: gallery/
 
   build:
     name: build

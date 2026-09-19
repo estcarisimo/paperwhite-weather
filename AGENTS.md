@@ -32,21 +32,26 @@ src/paperwhite_weather/
   config.py         Pydantic settings: Location, Units, Display, Settings; load_settings(path)
   models.py         WeatherSnapshot, CurrentConditions, DailyForecast, SunTimes, Condition
   units.py          celsius_to_fahrenheit, kmh_to_mph, kmh_to_ms
-  fonts.py          load_font(weight, size) from the bundled DejaVu Sans (assets/fonts/)
+  fonts.py          load_font(weight, size): "regular"/"bold" (DejaVu Sans), "serif"/"serif-bold"
+                    (DejaVu Serif), bundled in assets/fonts/
+  icons.py          draw_icon(draw, condition, box): monochrome vector icons, one per Condition
   sun.py            compute_sun_times(location, day) -> SunTimes via astral (civil twilight)
   providers/        base.py (WeatherProvider protocol), mock.py (fixture data),
                     open_meteo.py (live: build_query, parse_forecast, WMO_CONDITIONS,
                     OpenMeteoError), registry in __init__.py: get_provider(name),
                     available_providers()
-  skins/            base.py (Skin protocol, format helpers, CONDITION_LABELS),
-                    minimal.py; registry in __init__.py: get_skin(name), available_skins()
+  skins/            base.py (Skin protocol, format helpers, CONDITION_LABELS), common.py
+                    (Canvas: scaled px(), text(), rule(), icon(), footer(), metrics()),
+                    minimal.py, newspaper.py, weather_station.py, big_clock.py, forecast.py;
+                    registry in __init__.py: get_skin(name), available_skins()
   render.py         render_dashboard(snapshot, settings, now) -> "L" image at native size;
                     render_offline(settings, last_attempt_at, message); quantize_grayscale(image, levels)
   service.py        DashboardService (refresh(), frame(orientation), health()),
                     DashboardServer/DashboardHandler (stdlib http.server), serve_forever()
-  cli.py            Typer app: `paperwhite render|serve|skins|providers|version`
+  cli.py            Typer app: `paperwhite render|gallery|serve|skins|providers|version`
 tests/              pytest; conftest.py has the example-config and fixed-snapshot fixtures;
-                    fixtures/ holds a recorded Open-Meteo response (metric, Chicago)
+                    fixtures/ holds a recorded Open-Meteo response (metric, Chicago);
+                    goldens/ holds one PNG per skin and orientation (see its README)
 deploy/             systemd user unit and Avahi service file for the Raspberry Pi
 kindle/             paperwhite.sh (client, verified on the device), config.example,
                     extensions/paperwhite (KUAL), install.sh (draft); ShellCheck in CI
@@ -65,6 +70,7 @@ uv run mypy src/paperwhite_weather          # blocking in CI (disallow_untyped_d
 uv run pytest --cov=paperwhite_weather      # CI enforces --cov-fail-under=85
 uv run paperwhite render --config config.example.yaml --output /tmp/dashboard.png
 uv run paperwhite render -c config.example.yaml -o /tmp/d.png --now 2026-09-18T21:45:00+00:00
+uv run paperwhite gallery -c config.example.yaml -o tests/goldens --now 2026-09-18T21:45:00+00:00  # regenerate goldens on purpose
 uv run paperwhite serve -c config.example.yaml --host 127.0.0.1 --port 18765   # then GET /health
 uv build                                    # sdist + wheel via uv_build
 ```
@@ -82,7 +88,15 @@ uv build                                    # sdist + wheel via uv_build
   as such. Convert to `location.tzinfo` only when formatting.
 - Skins receive the canvas size and must return exactly that size in mode `"L"`;
   `render.py` rotates landscape canvases and quantizes to 16 gray levels. Skins never
-  load fonts from the host; use `fonts.load_font`.
+  load fonts from the host; use `fonts.load_font`. New skins build on `skins/common.py`
+  (`Canvas`), branch on `c.landscape` for the two layouts, keep the outer 1.5 % border
+  white, cope with every optional field being `None` and with a one-day forecast, and
+  register in `skins/__init__.py`. Then regenerate the goldens and add the README row.
+- Golden frames in `tests/goldens/` change only on purpose (`paperwhite gallery` with the
+  fixed `--now`), with the visual change described in the PR. The test tolerates 0.1 % of
+  pixels differing by more than one gray step, no more.
+- Icons are drawn, not loaded: `icons.py` maps every `Condition` to a drawer working in a
+  unit square; `tests/test_icons.py` checks each stays inside its box at three sizes.
 - Providers raise on any failure; no partial snapshots, no silent fallbacks. Caching the
   last good snapshot is `service.py`'s job, not the providers'.
 - Tests never call the real Open-Meteo API: parsing is tested on the recorded fixture and
