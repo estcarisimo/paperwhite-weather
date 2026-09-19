@@ -97,14 +97,20 @@ Done when: the Kindle has shown live weather for seven days without manual inter
 Goal: the five skins from the concept, selectable by configuration. This is where most of
 the refinement time goes, once the device runs unattended.
 
-- [ ] Monochrome condition icon set (own drawings or a permissively licensed set, with the
-      license file next to it).
-- [ ] `newspaper`, `weather-station`, `big-clock`, `forecast` skins.
-- [ ] Golden-image tests per skin with provenance; CI uploads every skin as an artifact.
-- [ ] Optional data in the model: feels-like, humidity, wind, UV, moon phase.
+- [x] Monochrome condition icon set, drawn with Pillow primitives (`icons.py`), no
+      external assets (2026-09-19).
+- [x] `newspaper`, `weather-station`, `big-clock`, `forecast` skins, portrait and landscape
+      (2026-09-19, first versions; refinement continues).
+- [x] Golden-image tests per skin with provenance (`tests/goldens/README.md`); CI uploads
+      the `skins-gallery` artifact (2026-09-19).
+- [x] Optional data shown where present: feels-like, humidity, wind, precipitation
+      (weather-station grid, newspaper deck). UV and moon phase: not in the model yet.
+- [ ] Refine layouts on the physical panel: type sizes from across the room, ghosting
+      after partial refreshes, the amount of empty space in portrait.
+- [ ] UV index and moon phase in the model and the weather-station skin.
 
-Done when: every skin renders both orientations from the mock provider and is pictured in
-the README.
+Done: every skin renders both orientations from the mock provider and is pictured in the
+README. Refinement items above stay open.
 
 ## Sprint 5 — Open-source polish and 0.1.0 (M4)
 

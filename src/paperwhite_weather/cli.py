@@ -9,7 +9,7 @@ from pathlib import Path
 import typer
 
 from paperwhite_weather import __version__
-from paperwhite_weather.config import load_settings
+from paperwhite_weather.config import Orientation, load_settings
 from paperwhite_weather.providers import MockProvider, available_providers, get_provider
 from paperwhite_weather.render import render_dashboard
 from paperwhite_weather.service import DEFAULT_CONFIG, DEFAULT_HOST, DEFAULT_PORT, serve_forever
@@ -71,6 +71,37 @@ def render(
         f"{width}x{height}) from {weather.source!r} data fetched at "
         f"{weather.fetched_at:%Y-%m-%d %H:%M} UTC -> {output}"
     )
+
+
+@app.command()
+def gallery(
+    config: Path = typer.Option(
+        DEFAULT_CONFIG, "--config", "-c", exists=True, dir_okay=False, envvar="PAPERWHITE_CONFIG"
+    ),
+    output_dir: Path = typer.Option(..., "--output-dir", "-o", help="Directory for the PNGs."),
+    provider: str = typer.Option("mock", "--provider", "-p", help="Weather provider name."),
+    now: datetime | None = typer.Option(
+        None,
+        "--now",
+        help="Timezone-aware ISO 8601 time for the clock (default: current time).",
+        formats=["%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M%z"],
+    ),
+) -> None:
+    """Render every skin in both orientations to OUTPUT_DIR as <skin>-<orientation>.png."""
+    settings = load_settings(config)
+    source = MockProvider(now=now) if provider == MockProvider.name else get_provider(provider)
+    weather = source.fetch(settings.location, settings.units)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    orientations: tuple[Orientation, ...] = ("landscape", "portrait")
+    for skin in available_skins():
+        for orientation in orientations:
+            display = settings.display.model_copy(update={"skin": skin, "orientation": orientation})
+            image = render_dashboard(
+                weather, settings.model_copy(update={"display": display}), now=now
+            )
+            path = output_dir / f"{skin}-{orientation}.png"
+            image.save(path, format="PNG")
+            typer.echo(str(path))
 
 
 @app.command()

@@ -20,7 +20,13 @@ def test_version() -> None:
 
 
 def test_lists() -> None:
-    assert runner.invoke(app, ["skins"]).output.split() == ["minimal"]
+    assert runner.invoke(app, ["skins"]).output.split() == [
+        "big-clock",
+        "forecast",
+        "minimal",
+        "newspaper",
+        "weather-station",
+    ]
     assert runner.invoke(app, ["providers"]).output.split() == ["mock", "open-meteo"]
 
 
@@ -54,7 +60,7 @@ def test_render_skin_override_reports_unknown_skin(tmp_path: Path) -> None:
     )
     assert result.exit_code != 0
     assert isinstance(result.exception, ValueError)
-    assert "available: minimal" in str(result.exception)
+    assert "available: big-clock" in str(result.exception)
 
 
 def test_render_unknown_provider_fails(tmp_path: Path) -> None:
@@ -146,3 +152,23 @@ def test_serve_defaults_to_config_yaml_in_the_working_directory(
     result = runner.invoke(app, ["serve"])
     assert result.exit_code == 0, result.output
     assert captured["settings"] is not None
+
+
+def test_gallery_renders_every_skin_in_both_orientations(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "gallery",
+            "-c",
+            str(EXAMPLE_CONFIG),
+            "-o",
+            str(tmp_path / "g"),
+            "--now",
+            "2026-09-18T21:45:00+00:00",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    files = sorted(p.name for p in (tmp_path / "g").glob("*.png"))
+    assert len(files) == 10 and "newspaper-landscape.png" in files
+    with Image.open(tmp_path / "g" / "big-clock-portrait.png") as image:
+        assert image.size == (1072, 1448)
