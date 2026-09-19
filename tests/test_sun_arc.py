@@ -83,6 +83,13 @@ def test_twilight_sun_and_degenerate_times_do_not_crash(sun: SunTimes) -> None:
 
 
 @pytest.mark.behaviour
+def test_a_box_too_small_to_draw_in_is_left_blank(sun: SunTimes) -> None:
+    image = Image.new("L", (40, 40), 255)
+    draw_sun_arc(ImageDraw.Draw(image), (10, 10, 18, 18), sun, _at(12), TZ, "12h", 1.0)
+    assert image.getextrema() == (255, 255)
+
+
+@pytest.mark.behaviour
 def test_narrow_box_keeps_sunrise_and_sunset_apart(sun: SunTimes) -> None:
     """In a narrow box the time labels shrink instead of overlapping; dawn/dusk are dropped."""
     image = _render(sun, _at(12), (260, 140), 1.0)
