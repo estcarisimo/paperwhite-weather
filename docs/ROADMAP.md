@@ -73,13 +73,15 @@ Goal: the dashboard runs unattended on the wall.
 - [x] `kindle/paperwhite.sh`: discover the server (config → last known → `.lan` →
       `.local` → bare → scan), fetch the image for the current orientation, display,
       periodic full clear against ghosting, fallback to the cached image (2026-09-19).
-- [ ] RTC wake and suspend between refreshes (after the battery measurement).
+- [x] RTC wake and suspend between refreshes (2026-09-19; awake measured 1.3 %/h, so
+      suspend is the default with a 90 s tap window).
 - [x] Tap to toggle orientation, persisted on the device (2026-09-19, synthetic taps).
 - [x] Keep our frame on screen: `stop framework`; `preventScreenSaver 1`; frontlight off
       and restored on stop (2026-09-19).
 - [ ] Portrait frame on the panel; confirm the landscape rotation direction as mounted.
-- [ ] Measure Wi-Fi reconnect time, RTC wake from suspend (`/sys/class/rtc/rtc0/wakealarm`),
-      and idle battery drain over a night, before the week-long run.
+- [x] Measure Wi-Fi reconnect time (connected on resume), RTC wake from suspend (to the
+      second), and idle battery drain over a night (1.3 %/h awake) (2026-09-19).
+- [ ] Battery drain with suspend, over a night (measuring from 2026-09-19 15:49 UTC).
 - [ ] Readability of the `minimal` skin from across a room, once the frame stays up;
       adjust type sizes.
 - [x] KUAL extension (Start, Stop, Show one frame, Toggle, Status) installed; `install.sh`

@@ -172,9 +172,24 @@ stop the framework or keep repainting.
 | `ip route`, `awk`, `timeout`, `dd`, `setsid`, `nohup`, `evemu-event`, `fbgrab` present | `which`; `evemu`/`fbgrab` come with USBNetwork |
 | `fbgrab /mnt/us/screen.png` captures the panel as a 1072x1448 PNG | run over SSH |
 
-Still open: suspend and RTC wake between refreshes (the loop currently keeps the device
-awake with Wi-Fi on; overnight battery measurement started 2026-09-19 01:53 UTC at 95 %),
-start at boot, and the rotation direction of the landscape frame as physically mounted.
+## Power: measured and verified on 2026-09-19
+
+| Fact | Evidence |
+| --- | --- |
+| Awake with Wi-Fi on, 15-minute refreshes: **95 % → 77 % in 13.8 h, about 1.3 %/h**, roughly three days per charge | `battery.log` on the device, 01:54 UTC to 15:41 UTC |
+| `/sys/power/state` offers `standby mem`; `/sys/class/rtc/rtc0/wakealarm` is writable; RTC and system clocks agree to the second | `cat`, `since_epoch` vs `date +%s` |
+| `echo <epoch> > wakealarm; echo mem > /sys/power/state` suspends within 2 s and resumes on the alarm to the second | 90 s test: SSH dropped at +2 s, back at +90 s; on-device log `resumed at 15:43:30` for an alarm at 15:43:29 |
+| Wi-Fi is `CONNECTED` immediately after resume; a fetch by DNS name succeeded 0.02 s later | `lipc-get-prop com.lab126.wifid cmState`, `time wget .../health` |
+| The client's cycle works: refresh, 40 s awake, `suspend for 80s`, `resumed`, re-fetch 5 s after resume | `paperwhite.log` with `REFRESH_MINUTES=2`, `AWAKE_SECONDS=40`; `current.png` mtime |
+| The stock GUI stays stopped and `preventScreenSaver` stays 1 across suspend/resume | `initctl list`, `lipc-get-prop` after resume |
+| `otaupd` is renamed to `/usr/bin/otaupd.bck`, so OTA updates are blocked (done by WinterBreak2) | `ls /usr/bin/otaup*` |
+| `fill_disk/`, `winterbreak2/`, and the exploit's crash reports deleted; 3.0 GB free | `df -h /mnt/us` |
+
+Battery with suspend is being measured from 2026-09-19 15:49 UTC at 77 %; the client logs
+the level on every refresh (`refresh: fresh landscape (battery 77%)`).
+
+Still open: start at boot, and the rotation direction of the landscape frame as physically
+mounted.
 
 `kindle/install.sh` is still a **draft**; the client was installed over SSH.
 

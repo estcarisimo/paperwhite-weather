@@ -9,8 +9,16 @@ SERVER_PORT="8765"
 # Or skip discovery entirely with a full base URL (no trailing slash).
 #SERVER_URL="http://192.168.1.10:8765"
 
-# Minutes between frames. Wi-Fi stays on; measure battery before going lower.
+# Minutes between frames.
 REFRESH_MINUTES="15"
+
+# Suspend between refreshes with an RTC wake ("yes"), or stay awake ("no"). Awake with
+# Wi-Fi on measured 1.3 %/hour on a Paperwhite 3; suspended it should last weeks.
+SUSPEND="yes"
+
+# Seconds to stay awake after each refresh so a tap can switch orientation. While
+# suspended, taps are ignored; the power button wakes the device for another window.
+AWAKE_SECONDS="90"
 
 # Every N frames, clear the panel first (a full refresh removes ghosting; it flashes).
 FULL_REFRESH_EVERY="4"

@@ -56,9 +56,22 @@ In order, stopping at the first `/health` that identifies as `paperwhite-weather
 the default gateway's subnet, 32 hosts at a time. `PAPERWHITE_SERVER` in the environment
 overrides `SERVER_HOST` for one run.
 
+## Power
+
+After each refresh the device stays awake for `AWAKE_SECONDS` (90) so a tap can switch
+orientation, then sets an RTC alarm for the next refresh and suspends (`SUSPEND="yes"`).
+Suspend takes about two seconds; resume is on the alarm to the second, and Wi-Fi is
+connected again immediately. A tap while suspended does nothing; the power button wakes
+the device and opens a new tap window. Measured awake with Wi-Fi on: 1.3 %/hour, about
+three days per charge, which is why suspend is the default. Every refresh logs the
+battery level, so `paperwhite.log` doubles as the battery record.
+
+While the device sleeps, Wi-Fi and the CPU are off: `stop` or any other SSH command is
+not delivered until the next wake, up to `REFRESH_MINUTES` later. To stop sooner, press
+the power button first and run `stop` within the `AWAKE_SECONDS` window. If suspending
+fails (the alarm cannot be set or the kernel refuses), the loop logs it and stays awake
+reading taps until the next refresh instead of retrying.
+
 ## Not yet done
 
-- Suspend between refreshes with an RTC wake (`/sys/class/rtc/rtc0/wakealarm`). The loop
-  keeps the device awake with Wi-Fi on; the overnight battery measurement decides whether
-  that is acceptable at 15-minute refreshes.
 - Start at boot.

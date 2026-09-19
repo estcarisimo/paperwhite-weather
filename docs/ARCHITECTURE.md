@@ -177,18 +177,20 @@ screensaver and frontlight, and loops:
 3. Wait `REFRESH_MINUTES`, reading the touch device meanwhile; a tap toggles the
    orientation and repaints at once.
 
-Verified on the device on 2026-09-19 (`docs/DEVICE.md`). Suspend with RTC wake between
-refreshes is not implemented; the device stays awake with Wi-Fi on, and an overnight
-battery measurement decides whether that is acceptable.
+4. Stay awake `AWAKE_SECONDS` for taps, then set the RTC alarm for the next refresh and
+   suspend; on resume, wait for Wi-Fi and go to step 1.
+
+Verified on the device on 2026-09-19 (`docs/DEVICE.md`). Awake with Wi-Fi on cost
+1.3 %/hour, so suspend is the default.
 
 ## Open questions and current recommendations
 
 | Question | Recommendation | Why |
 | --- | --- | --- |
-| Live clock every minute vs. ambient refresh | Start with one refresh per `refresh_minutes` (15) showing the render time; measure battery in Sprint 3 before deciding | Minute refreshes multiply wake-ups and panel writes by 15 |
+| Live clock every minute vs. ambient refresh | Ambient: one refresh per `refresh_minutes` (15), device suspended in between; the clock shows the refresh time | Awake with Wi-Fi costs 1.3 %/h (measured); a minute clock would keep the device awake |
 | Pillow vs. HTML/CSS + headless browser | Pillow | No browser dependency on a Raspberry Pi, deterministic, fast; revisit if a skin needs layout features Pillow cannot do |
 | Where the service runs | Raspberry Pi on the LAN; static-hosting variant documented | Keeps location private, no cloud account needed |
-| Portrait vs. landscape | Portrait default, landscape supported by configuration | Matches the device's native framebuffer; either works on the wall |
+| Portrait vs. landscape | Landscape default, both served on every refresh, a tap toggles on the device (decided 2026-09-18) | Reads as a wall panel; the framebuffer is portrait, so `render.py` rotates the landscape canvas |
 | Default skin | `minimal` | Smallest surface to get right first |
 | Weather provider | Open-Meteo (done) | No API key for non-commercial use; sun times and civil twilight computed locally with `astral` |
 | Project name | Paperwhite Weather | Already used for the repository and Notion page |
