@@ -24,6 +24,7 @@ from paperwhite_weather.skins.base import (
     format_clock,
     format_temperature,
 )
+from paperwhite_weather.skins.sun_arc import draw_sun_arc
 
 DESIGN_PORTRAIT = (1072, 1448)
 DESIGN_LANDSCAPE = (1448, 1072)
@@ -93,6 +94,20 @@ class Canvas:
     def icon(self, condition: Condition, box: tuple[float, float, float, float]) -> None:
         draw_icon(self.draw, condition, tuple(round(v) for v in box))  # type: ignore[arg-type]
 
+    def sun_arc(self, box: tuple[float, float, float, float]) -> int:
+        """Draw the day's sun arc (dawn to dusk, sun marked) in ``box``; returns its bottom."""
+        left, top, right, bottom = (round(v) for v in box)
+        draw_sun_arc(
+            self.draw,
+            (left, top, right, bottom),
+            self.snapshot.sun,
+            self.now,
+            self.tz,
+            self.time_format,
+            self.scale,
+        )
+        return bottom
+
     # Formatting shortcuts
 
     def clock(self, moment: datetime | None = None) -> str:
@@ -115,15 +130,6 @@ class Canvas:
 
     def condition_label(self, condition: Condition) -> str:
         return CONDITION_LABELS[condition]
-
-    def sun_pairs(self) -> list[tuple[str, str]]:
-        sun = self.snapshot.sun
-        return [
-            ("Dawn", self.clock(sun.civil_dawn)),
-            ("Sunrise", self.clock(sun.sunrise)),
-            ("Sunset", self.clock(sun.sunset)),
-            ("Dusk", self.clock(sun.civil_dusk)),
-        ]
 
     def footer(self) -> None:
         """Data freshness and units, bottom right, so stale data is obvious."""

@@ -34,34 +34,43 @@ class ForecastSkin:
         y = m + c.px(70)
         y = c.rule(m, y, w, BLACK, 3)
 
-        # Today: icon, temperature, condition, range, precipitation.
+        # Today: icon, temperature, condition, range, precipitation; the sun arc to the
+        # right in landscape, below in portrait.
         y += c.px(30)
-        icon_size = c.px(230)
+        icon_size = c.px(200 if c.landscape else 230)
+        temp_size = 170 if c.landscape else 200
         c.icon(snapshot.current.condition, (m, y, m + icon_size, y + icon_size))
         x = m + icon_size + c.px(40)
         temp = c.temperature(snapshot.current.temperature)
-        c.text((x, y - c.px(20)), temp, "bold", 200, anchor="la", max_width=w * 0.45)
-        x2 = x + c.text_width(temp, "bold", 200) + c.px(30)
+        c.text((x, y - c.px(20)), temp, "bold", temp_size, anchor="la", max_width=w * 0.45)
+        x2 = x + c.text_width(temp, "bold", temp_size) + c.px(30)
         today = snapshot.today
         lines = [
-            (c.condition_label(snapshot.current.condition), 52, BLACK),
-            (
-                c.high_low(today),
-                44,
-                DARK_GRAY,
-            ),
+            (c.condition_label(snapshot.current.condition), 46 if c.landscape else 52, BLACK),
+            (c.high_low(today), 40 if c.landscape else 44, DARK_GRAY),
         ]
         if today.precipitation_probability is not None:
             lines.append(
-                (f"Precipitation {round(today.precipitation_probability)}%", 40, DARK_GRAY)
+                (
+                    f"Precipitation {round(today.precipitation_probability)}%",
+                    36 if c.landscape else 40,
+                    DARK_GRAY,
+                )
             )
+        arc_left = c.width - m - c.px(430)
+        text_right = arc_left - c.px(30) if c.landscape else c.width - m
         ly = y + c.px(20)
         for text, size_, fill in lines:
             used = c.text(
-                (x2, ly), text, "regular", size_, fill=fill, anchor="la", max_width=c.width - m - x2
+                (x2, ly), text, "regular", size_, fill=fill, anchor="la", max_width=text_right - x2
             )
             ly += round(used * 1.4)
-        y += icon_size + c.px(40)
+        if c.landscape:
+            c.sun_arc((arc_left, y - c.px(10), c.width - m, y + icon_size + c.px(10)))
+            y += icon_size + c.px(40)
+        else:
+            y += icon_size + c.px(30)
+            y = c.sun_arc((m, y, c.width - m, y + c.px(230))) + c.px(30)
         y = c.rule(m, y, w, LIGHT_GRAY, 2)
         y += c.px(30)
 

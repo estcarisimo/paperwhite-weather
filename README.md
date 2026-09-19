@@ -21,7 +21,7 @@ displays it.
 - 🎨 **Five skins on one data model**: `minimal`, `newspaper`, `weather-station`, `big-clock`, `forecast`; each has a portrait and a landscape layout, and all draw from the same snapshot
 - 🔌 **Pluggable providers**: Open-Meteo for live data (no API key), a deterministic `mock` provider for development
 - 🌤️ **Monochrome icons** drawn with vector primitives, so they scale to any panel and carry no license baggage
-- 🌅 **Civil twilight**: dawn, sunrise, sunset, and dusk computed locally from your coordinates
+- 🌅 **The sun's day as one graphic**: an arc over the horizon from civil dawn to civil dusk, the sun marked where it is now, computed locally from your coordinates
 - 🕒 **Honest timestamps**: every frame shows when its data was fetched, so stale data is obvious
 - 🧪 **Testable without a Kindle**: the renderer runs anywhere Python runs; CI uploads the rendered frame
 - 📡 **LAN service**: `paperwhite serve` publishes `/dashboard/{landscape,portrait}.png` and a `/health` identity on port 8765; a failed fetch keeps the last good frame
@@ -169,8 +169,8 @@ portrait. `paperwhite gallery` produces all of these; CI uploads them on every r
 ## 🗺️ Roadmap
 
 The five skins above are first versions. The next round makes them **more graphic and
-less textual**: sun times as a horizon arc instead of four clocks, temperature ranges as
-bars on a shared scale instead of "H 75° L 57°", precipitation and wind as icons with a
+less textual**: the sun arc above is the first step; next are temperature ranges as bars
+on a shared scale instead of "H 75° L 57°", precipitation and wind as icons with a
 number, and a review of every icon on the physical panel. The `newspaper` skin stays
 text-first on purpose. The full plan, with what is done and what is open, is in
 [`docs/ROADMAP.md`](docs/ROADMAP.md); ideas are welcome as issues.

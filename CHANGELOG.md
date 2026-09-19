@@ -17,13 +17,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Tested on a recorded response and a local stub server, never against the live API.
 - Civil dawn/dusk and sunrise/sunset computed locally with `astral`, pinned to a US Naval
   Observatory table.
-- `minimal` skin: large clock and temperature, today's range, sun events, and a
+- `minimal` skin: large clock and temperature, today's range, the sun arc, and a
   four-day forecast. Portrait is a single column; landscape is a two-column layout that
   uses the full width.
 - Four more skins, each with portrait and landscape layouts: `newspaper` (serif front
   page), `weather-station` (metrics grid), `big-clock`, and `forecast`. Shared drawing
   helpers in `skins/common.py`; DejaVu Serif bundled alongside DejaVu Sans.
 - Monochrome weather icons drawn with Pillow primitives for every condition.
+- The sun's day as one graphic (`skins/sun_arc.py`): an arc over a horizon line from
+  civil dawn to civil dusk, twilight in gray below the line, sunrise and sunset marked and
+  labeled, a filled disc where the sun is now (hollow under the horizon at night). Used
+  by `minimal`, `weather-station`, `big-clock`, and `forecast` in place of the four
+  labeled clocks; `newspaper` keeps its sentence.
 - `paperwhite gallery` renders every skin in both orientations; CI uploads the result.
   Golden-image tests in `tests/goldens/` pin each frame.
 - `--orientation` option on `paperwhite render` to override the configured orientation.

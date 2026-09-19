@@ -40,8 +40,9 @@ src/paperwhite_weather/
                     open_meteo.py (live: build_query, parse_forecast, WMO_CONDITIONS,
                     OpenMeteoError), registry in __init__.py: get_provider(name),
                     available_providers()
-  skins/            base.py (Skin protocol, format helpers, CONDITION_LABELS), common.py
-                    (Canvas: scaled px(), text(), rule(), icon(), footer(), metrics()),
+  skins/            base.py (Skin protocol, format helpers, CONDITION_LABELS), sun_arc.py
+                    (draw_sun_arc: the day's arc over a horizon line, sun marked), common.py
+                    (Canvas: scaled px(), text(), rule(), icon(), sun_arc(), footer(), metrics()),
                     minimal.py, newspaper.py, weather_station.py, big_clock.py, forecast.py;
                     registry in __init__.py: get_skin(name), available_skins()
   render.py         render_dashboard(snapshot, settings, now) -> "L" image at native size;
@@ -97,6 +98,8 @@ uv build                                    # sdist + wheel via uv_build
   pixels differing by more than one gray step, no more.
 - Icons are drawn, not loaded: `icons.py` maps every `Condition` to a drawer working in a
   unit square; `tests/test_icons.py` checks each stays inside its box at three sizes.
+  The sun arc (`skins/sun_arc.py`) is the same idea for the sun times: one graphic in a
+  box, `tests/test_sun_arc.py` checks it stays inside and degrades in narrow boxes.
 - Providers raise on any failure; no partial snapshots, no silent fallbacks. Caching the
   last good snapshot is `service.py`'s job, not the providers'.
 - Tests never call the real Open-Meteo API: parsing is tested on the recorded fixture and

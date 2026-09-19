@@ -16,7 +16,7 @@ _FORECAST_DAYS = 4
 
 
 class WeatherStationSkin:
-    """Clock, current conditions, a metrics grid, sun times, and the forecast."""
+    """Clock, current conditions, a metrics grid, the sun arc, and the forecast."""
 
     name: ClassVar[str] = "weather-station"
 
@@ -49,13 +49,15 @@ class WeatherStationSkin:
             right_w = c.width - m - right_x
             self._current(c, m, y, left_w)
             gy = self._grid(c, right_x, y, right_w)
-            y2 = max(self._current_height(c, y), gy) + c.px(30)
+            ay = c.sun_arc((m, self._current_height(c, y), m + left_w, y + c.px(420)))
+            y2 = max(ay, gy) + c.px(30)
             y2 = c.rule(m, y2, w, LIGHT_GRAY, 2) + c.px(24)
             self._forecast_columns(c, m, y2, w)
         else:
             self._current(c, m, y, w)
             y = self._current_height(c, y) + c.px(20)
-            y = self._grid(c, m, y, w) + c.px(20)
+            y = self._grid(c, m, y, w) + c.px(30)
+            y = c.sun_arc((m, y, c.width - m, y + c.px(270))) + c.px(30)
             y = c.rule(m, y, w, LIGHT_GRAY, 2) + c.px(24)
             self._forecast_columns(c, m, y, w)
         c.footer()
@@ -94,8 +96,8 @@ class WeatherStationSkin:
         return y + c.px(260)
 
     def _grid(self, c: Canvas, x: int, y: int, width: int) -> int:
-        """Two columns of label/value cells: metrics, then sun times. Returns the bottom y."""
-        cells = c.metrics() + c.sun_pairs()
+        """Two columns of label/value cells with the optional metrics. Returns the bottom y."""
+        cells = c.metrics()
         columns = 2
         cell_w = width / columns
         cell_h = c.px(96)
