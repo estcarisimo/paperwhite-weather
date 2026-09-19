@@ -19,7 +19,8 @@ displays it.
 
 - 🖼️ **Kindle-native rendering**: 1072x1448 grayscale PNG, quantized to the panel's 16 gray levels, landscape (default) or portrait, each with its own layout
 - 🎨 **Skins on one data model**: layouts are independent of the weather source; `minimal` ships today, four more are planned
-- 🔌 **Pluggable providers**: a deterministic `mock` provider today; Open-Meteo next
+- 🔌 **Pluggable providers**: Open-Meteo for live data (no API key), a deterministic `mock` provider for development
+- 🌅 **Civil twilight**: dawn, sunrise, sunset, and dusk computed locally from your coordinates
 - 🕒 **Honest timestamps**: every frame shows when its data was fetched, so stale data is obvious
 - 🧪 **Testable without a Kindle**: the renderer runs anywhere Python runs; CI uploads the rendered frame
 - 📡 **LAN service**: `paperwhite serve` publishes `/dashboard/{landscape,portrait}.png` and a `/health` identity on port 8765; a failed fetch keeps the last good frame
@@ -44,6 +45,9 @@ project is not on PyPI yet; install from GitHub as above.
 # Render one frame with fixture data (no network needed)
 uv run paperwhite render --config config.example.yaml --output dashboard.png
 
+# Render with live weather from Open-Meteo
+uv run paperwhite render --config config.yaml --provider open-meteo --output dashboard.png
+
 # Pin the clock for reproducible output; the value must carry a UTC offset
 uv run paperwhite render -c config.example.yaml -o dashboard.png --now 2026-09-18T21:45:00+00:00
 
@@ -52,7 +56,7 @@ uv run paperwhite render -c config.example.yaml -o dashboard.png --skin minimal
 uv run paperwhite render -c config.example.yaml -o dashboard.png --orientation portrait
 
 # Serve frames on the LAN (fetches on a schedule, renders on request)
-uv run paperwhite serve --config config.yaml --port 8765
+PAPERWHITE_PROVIDER=open-meteo uv run paperwhite serve --config config.yaml --port 8765
 curl -s http://localhost:8765/health
 
 # What is available
@@ -104,7 +108,8 @@ src/paperwhite_weather/
 ├── models.py          # WeatherSnapshot and friends: the provider-independent data model
 ├── units.py           # temperature and speed conversions
 ├── fonts.py           # bundled DejaVu Sans (Bitstream Vera license)
-├── providers/         # WeatherProvider protocol, mock provider, registry
+├── sun.py             # civil dawn/dusk, sunrise/sunset via astral
+├── providers/         # WeatherProvider protocol, mock and Open-Meteo providers, registry
 ├── skins/             # Skin protocol, format helpers, minimal skin, registry
 ├── render.py          # render_dashboard(): compose, rotate, quantize to 16 grays; render_offline()
 ├── service.py         # DashboardService (cache + per-minute frames) and the HTTP server
@@ -180,7 +185,8 @@ original implementation and does not build on any of them.
 - [abbymartin/eink-dashboard](https://github.com/abbymartin/eink-dashboard)
 - [jefftko/kindle-dashboard](https://github.com/jefftko/kindle-dashboard)
 - [HimbeersaftLP/KindleDashboard](https://github.com/HimbeersaftLP/KindleDashboard)
-- [Open-Meteo](https://open-meteo.com/), the planned weather provider
+- [Open-Meteo](https://open-meteo.com/), the weather provider (CC BY 4.0 data, free for non-commercial use)
+- [astral](https://github.com/sffjunkie/astral), the sun-position library used for civil twilight
 - [MobileRead Kindle Developer's Corner](https://www.mobileread.com/forums/forumdisplay.php?f=150), home of the jailbreak tooling
 
 ## 🙏 Acknowledgements

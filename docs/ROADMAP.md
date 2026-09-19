@@ -50,17 +50,16 @@ Open items above are listed again under Sprint 3.
 
 Goal: real data, refreshed automatically, served on the LAN.
 
-- [ ] `open-meteo` provider (current, daily low/high, precipitation probability,
-      condition mapping from WMO weather codes, sunrise/sunset) with a recorded response
-      fixture and tests.
-- [ ] Civil dawn/dusk computed locally from coordinates (evaluate `astral`; otherwise
-      implement the standard solar-position formulas with a `math`-marked test against a
-      published table).
+- [x] `open-meteo` provider (current, daily low/high, precipitation probability,
+      condition mapping from WMO weather codes) with a recorded response fixture and
+      tests (2026-09-19).
+- [x] Civil dawn/dusk computed locally from coordinates with `astral`; `math`-marked test
+      against the US Naval Observatory table for the fixture date (2026-09-19).
 - [x] `paperwhite serve`: refresh every `refresh_minutes`, render both orientations, keep
       the last good snapshot, serve `/dashboard/{landscape,portrait}.png`, `/dashboard.png`
       and the `/health` identity on port 8765; systemd unit and Avahi service file for the
       Raspberry Pi (installed on the maintainer's Pi 2026-09-18 with the mock provider).
-- [ ] Switch the installed unit to the live provider once it exists.
+- [x] Installed unit on the maintainer's Pi switched to `open-meteo` via `.env` (2026-09-19).
 - [x] Offline frame when no snapshot has ever succeeded; "Updated" footer already covers
       stale data.
 

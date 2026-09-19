@@ -33,8 +33,11 @@ src/paperwhite_weather/
   models.py         WeatherSnapshot, CurrentConditions, DailyForecast, SunTimes, Condition
   units.py          celsius_to_fahrenheit, kmh_to_mph, kmh_to_ms
   fonts.py          load_font(weight, size) from the bundled DejaVu Sans (assets/fonts/)
-  providers/        base.py (WeatherProvider protocol), mock.py (fixture data), registry in
-                    __init__.py: get_provider(name), available_providers()
+  sun.py            compute_sun_times(location, day) -> SunTimes via astral (civil twilight)
+  providers/        base.py (WeatherProvider protocol), mock.py (fixture data),
+                    open_meteo.py (live: build_query, parse_forecast, WMO_CONDITIONS,
+                    OpenMeteoError), registry in __init__.py: get_provider(name),
+                    available_providers()
   skins/            base.py (Skin protocol, format helpers, CONDITION_LABELS),
                     minimal.py; registry in __init__.py: get_skin(name), available_skins()
   render.py         render_dashboard(snapshot, settings, now) -> "L" image at native size;
@@ -42,7 +45,8 @@ src/paperwhite_weather/
   service.py        DashboardService (refresh(), frame(orientation), health()),
                     DashboardServer/DashboardHandler (stdlib http.server), serve_forever()
   cli.py            Typer app: `paperwhite render|serve|skins|providers|version`
-tests/              pytest; conftest.py has the example-config and fixed-snapshot fixtures
+tests/              pytest; conftest.py has the example-config and fixed-snapshot fixtures;
+                    fixtures/ holds a recorded Open-Meteo response (metric, Chicago)
 deploy/             systemd user unit and Avahi service file for the Raspberry Pi
 kindle/             device-side shell scripts (Sprint 3; empty until then)
 docs/               ARCHITECTURE.md, DEVICE.md, DEPLOY.md, ROADMAP.md, REPOSITORY_STATE.md
@@ -80,6 +84,13 @@ uv build                                    # sdist + wheel via uv_build
   load fonts from the host; use `fonts.load_font`.
 - Providers raise on any failure; no partial snapshots, no silent fallbacks. Caching the
   last good snapshot is `service.py`'s job, not the providers'.
+- Tests never call the real Open-Meteo API: parsing is tested on the recorded fixture and
+  the HTTP layer on a local stub server. CI's smoke test uses `--provider mock`. To refresh
+  the fixture, run the URL in `tests/fixtures/README.md` and commit the new JSON with the
+  date in the filename; update the pinned values in `tests/test_open_meteo.py`.
+- Sun times are computed locally with `astral` (Apache-2.0), never taken from the
+  provider, so every provider gets civil twilight for free. `tests/test_sun.py` pins them
+  to a US Naval Observatory table (`math` marker).
 - The service renders on request (clock = request time) and memoizes per minute; it never
   stores rendered files on disk. HTTP is stdlib `http.server`; do not add a web framework
   for four routes.
@@ -113,6 +124,10 @@ uv build                                    # sdist + wheel via uv_build
   (`src/paperwhite_weather/assets/fonts/LICENSE-DejaVu.txt`). Adding another typeface
   needs a license check and the license file next to it.
 - `MockProvider` builds "today" from the location's local date, not the UTC date.
+- Open-Meteo returns local-time strings without an offset (`2026-09-18T06:33`); only the
+  daily `time` dates are used, and sun times come from `astral`, so no naive datetime
+  ever reaches the model. WMO codes not in `WMO_CONDITIONS` map to `Condition.UNKNOWN`
+  (shown as a dash), never raise.
 - `render_dashboard` verifies the skin's output size and raises; do not catch that.
 - The existing Kindle dashboard projects listed in `README.md` are prior art to study,
   not code to copy. Any reuse is an explicit decision recorded in the PR after checking

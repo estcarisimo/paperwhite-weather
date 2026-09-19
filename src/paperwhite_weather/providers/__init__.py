@@ -6,9 +6,11 @@ from collections.abc import Callable
 
 from paperwhite_weather.providers.base import WeatherProvider
 from paperwhite_weather.providers.mock import MockProvider
+from paperwhite_weather.providers.open_meteo import OpenMeteoProvider
 
 _FACTORIES: dict[str, Callable[[], WeatherProvider]] = {
     MockProvider.name: MockProvider,
+    OpenMeteoProvider.name: OpenMeteoProvider,
 }
 
 
@@ -34,4 +36,10 @@ def get_provider(name: str) -> WeatherProvider:
     return factory()
 
 
-__all__ = ["MockProvider", "WeatherProvider", "available_providers", "get_provider"]
+__all__ = [
+    "MockProvider",
+    "OpenMeteoProvider",
+    "WeatherProvider",
+    "available_providers",
+    "get_provider",
+]
