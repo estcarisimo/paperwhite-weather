@@ -188,8 +188,9 @@ stop the framework or keep repainting.
 Battery with suspend is being measured from 2026-09-19 15:49 UTC at 77 %; the client logs
 the level on every refresh (`refresh: fresh landscape (battery 77%)`).
 
-Still open: start at boot, and the rotation direction of the landscape frame as physically
-mounted.
+| `paperwhite.sh enable-boot` writes `/etc/upstart/paperwhite.conf` (`start on started framework`, `task`, `exec … boot`) with `mntroot rw`/`ro`, root back to `ro` afterwards; after `reboot` the job ran `boot` at +57 s, Wi-Fi was connected 9 s later, and the loop painted a fresh frame with the GUI stopped at +68 s, with no command from outside | `mount`, `paperwhite.log` after the reboot (`boot: waiting for Wi-Fi` … `framework stopped` … `refresh: fresh`), `status`, `initctl status framework` → `stop/waiting` |
+
+Still open: the rotation direction of the landscape frame as physically mounted.
 
 `kindle/install.sh` is still a **draft**; the client was installed over SSH.
 

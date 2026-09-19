@@ -86,7 +86,8 @@ Goal: the dashboard runs unattended on the wall.
       adjust type sizes.
 - [x] KUAL extension (Start, Stop, Show one frame, Toggle, Status) installed; `install.sh`
       over USB still a draft (installed over SSH instead).
-- [ ] Start at boot.
+- [x] Start at boot: `enable-boot` writes an upstart job; verified with a reboot
+      (2026-09-19).
 - [ ] Battery measurement over a week at 15-minute refresh; decide on the clock question.
 - [ ] Photos of the device for the README.
 
