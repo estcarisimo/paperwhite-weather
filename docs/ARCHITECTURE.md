@@ -190,7 +190,7 @@ Verified on the device on 2026-09-19 (`docs/DEVICE.md`). Awake with Wi-Fi on cos
 | Live clock every minute vs. ambient refresh | Ambient: one refresh per `refresh_minutes` (15), device suspended in between; the clock shows the refresh time | Awake with Wi-Fi costs 1.3 %/h (measured); a minute clock would keep the device awake |
 | Pillow vs. HTML/CSS + headless browser | Pillow | No browser dependency on a Raspberry Pi, deterministic, fast; revisit if a skin needs layout features Pillow cannot do |
 | Where the service runs | Raspberry Pi on the LAN; static-hosting variant documented | Keeps location private, no cloud account needed |
-| Portrait vs. landscape | Portrait default, landscape supported by configuration | Matches the device's native framebuffer; either works on the wall |
+| Portrait vs. landscape | Landscape default, both served on every refresh, a tap toggles on the device (decided 2026-09-18) | Reads as a wall panel; the framebuffer is portrait, so `render.py` rotates the landscape canvas |
 | Default skin | `minimal` | Smallest surface to get right first |
 | Weather provider | Open-Meteo (done) | No API key for non-commercial use; sun times and civil twilight computed locally with `astral` |
 | Project name | Paperwhite Weather | Already used for the repository and Notion page |

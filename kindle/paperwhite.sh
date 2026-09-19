@@ -201,7 +201,7 @@ can_suspend() {
 suspend_until() {
     # $1: epoch seconds. Sets the RTC alarm and suspends; returns after resume.
     now="$(date +%s)"
-    [ "$1" -gt $((now + 5)) ] || return 1
+    [ "$1" -gt $((now + 5)) ] || { log "suspend: deadline too close ($(( $1 - now ))s)"; return 1; }
     echo 0 > "$RTC_WAKEALARM" 2>/dev/null
     echo "$1" > "$RTC_WAKEALARM" 2>/dev/null || { log "suspend: cannot set wakealarm"; return 1; }
     log "suspend for $(( $1 - now ))s (battery $(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null)%)"
@@ -245,8 +245,11 @@ run_loop() {
                 if suspend_until "$deadline"; then
                     # An early resume (power button) gets a fresh tap window.
                     awake_until=$(( $(date +%s) + AWAKE_SECONDS ))
-                    continue
+                else
+                    # Could not suspend: stay awake reading taps until the deadline.
+                    awake_until="$deadline"
                 fi
+                continue
             fi
             [ "$awake_until" ] || awake_until=$(( now + AWAKE_SECONDS ))
             window="$TAP_WINDOW_SECONDS"

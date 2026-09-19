@@ -66,6 +66,12 @@ the device and opens a new tap window. Measured awake with Wi-Fi on: 1.3 %/hour,
 three days per charge, which is why suspend is the default. Every refresh logs the
 battery level, so `paperwhite.log` doubles as the battery record.
 
+While the device sleeps, Wi-Fi and the CPU are off: `stop` or any other SSH command is
+not delivered until the next wake, up to `REFRESH_MINUTES` later. To stop sooner, press
+the power button first and run `stop` within the `AWAKE_SECONDS` window. If suspending
+fails (the alarm cannot be set or the kernel refuses), the loop logs it and stays awake
+reading taps until the next refresh instead of retrying.
+
 ## Not yet done
 
 - Start at boot.
