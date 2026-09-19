@@ -12,11 +12,16 @@
 #   cache/current.png   last frame fetched; shown when the server is unreachable
 #   paperwhite.log      one line per event
 #
-# Usage: paperwhite.sh start|stop|once|status|toggle   (loop: internal, used by start)
+# Usage: paperwhite.sh start|stop|once|status|toggle|enable-boot|disable-boot
+#        (loop and boot: internal, used by start and by the upstart job)
 #
 # Power: after each refresh the device stays awake AWAKE_SECONDS for taps, then suspends
 # with an RTC alarm for the next refresh (SUSPEND="yes"). A tap while suspended does
 # nothing; the power button wakes the device and opens a new tap window.
+#
+# Boot: enable-boot writes an upstart job on the (read-only, mntroot-toggled) root
+# filesystem that runs "paperwhite.sh boot" once the stock framework has started: wait for
+# Wi-Fi, then start. disable-boot removes the job. A firmware update would remove it too.
 
 BASE="/mnt/us/paperwhite"
 CONFIG="$BASE/config"
@@ -24,6 +29,8 @@ STATE="$BASE/state"
 CACHE="$BASE/cache"
 LOG="$BASE/paperwhite.log"
 PIDFILE="$STATE/paperwhite.pid"
+SELF="$BASE/paperwhite.sh"
+UPSTART_JOB="/etc/upstart/paperwhite.conf"
 EIPS="/usr/sbin/eips"
 TOUCH_DEVICE="/dev/input/event1"
 
@@ -222,6 +229,31 @@ wait_for_wifi() {
     return 1
 }
 
+# --- start at boot -------------------------------------------------------------------
+
+boot_enabled() {
+    [ -f "$UPSTART_JOB" ]
+}
+
+with_writable_root() {
+    # Run "$@" with the root filesystem writable; mntroot is the stock Kindle tool for it.
+    mntroot rw > /dev/null 2>&1 || { echo "cannot make the root filesystem writable" >&2; return 1; }
+    "$@"
+    rc=$?
+    mntroot ro > /dev/null 2>&1
+    return "$rc"
+}
+
+write_upstart_job() {
+    cat > "$UPSTART_JOB" <<EOF
+# Paperwhite Weather: start the dashboard client at boot.
+# Written by "$SELF enable-boot"; remove with "$SELF disable-boot".
+start on started framework
+task
+exec $SELF boot
+EOF
+}
+
 # --- main loop -----------------------------------------------------------------------
 
 run_loop() {
@@ -292,6 +324,14 @@ case "$1" in
         printf '%s\n' "$$" > "$PIDFILE"
         run_loop
         ;;
+    boot)
+        # Run by the upstart job right after the stock framework starts; Wi-Fi is still
+        # connecting, and the first fetch falls back to the cached frame if it takes longer.
+        load_config
+        log "boot: waiting for Wi-Fi"
+        wait_for_wifi 120 || true
+        exec "$SELF" start
+        ;;
     stop)
         load_config
         if pid="$(running_pid)"; then
@@ -318,6 +358,7 @@ case "$1" in
         echo "server: $(cat "$STATE/server_url" 2>/dev/null || echo unknown)"
         echo "battery: $(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null)%"
         echo "frontlight: $(lipc-get-prop com.lab126.powerd flIntensity 2>/dev/null)"
+        if boot_enabled; then echo "start at boot: enabled"; else echo "start at boot: disabled"; fi
         tail -n 5 "$LOG" 2>/dev/null
         ;;
     toggle)
@@ -325,8 +366,24 @@ case "$1" in
         toggle_orientation
         echo "orientation: $ORIENTATION (takes effect at the next refresh or tap)"
         ;;
+    enable-boot)
+        with_writable_root write_upstart_job && {
+            log "start at boot enabled"
+            echo "start at boot enabled ($UPSTART_JOB)"
+        }
+        ;;
+    disable-boot)
+        if boot_enabled; then
+            with_writable_root rm -f "$UPSTART_JOB" && {
+                log "start at boot disabled"
+                echo "start at boot disabled"
+            }
+        else
+            echo "start at boot was not enabled"
+        fi
+        ;;
     *)
-        echo "usage: $0 start|stop|once|status|toggle" >&2
+        echo "usage: $0 start|stop|once|status|toggle|enable-boot|disable-boot" >&2
         exit 2
         ;;
 esac

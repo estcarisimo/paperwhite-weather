@@ -46,7 +46,8 @@ Then on the Kindle: KUAL → Paperwhite Weather → Start dashboard. Or over SSH
 and kills the loop's process group, including the blocking touch read. **With the GUI
 stopped, the Kindle's own controls are unreachable**; `stop` from KUAL is not possible
 either since KUAL is part of the GUI. Stop over SSH, or hold the power button for a
-restart (the loop does not start at boot).
+restart; with start at boot enabled (below) the dashboard comes back after the restart,
+so use SSH to get the Kindle's own GUI back.
 
 ## Discovery
 
@@ -72,6 +73,13 @@ the power button first and run `stop` within the `AWAKE_SECONDS` window. If susp
 fails (the alarm cannot be set or the kernel refuses), the loop logs it and stays awake
 reading taps until the next refresh instead of retrying.
 
-## Not yet done
+## Start at boot
 
-- Start at boot.
+`paperwhite.sh enable-boot` (also a KUAL entry) writes `/etc/upstart/paperwhite.conf`, an
+upstart job that runs `paperwhite.sh boot` once the stock framework has started: it waits
+up to 120 s for Wi-Fi, then does what `start` does. The root filesystem is read-only; the
+stock `mntroot rw` / `mntroot ro` pair makes it writable for the write. `disable-boot`
+removes the job; `status` reports whether it is present. A firmware update would remove
+the job as well (updates are blocked on a jailbroken device that keeps its jailbreak).
+Verified on the device: after `reboot` the loop was running with a fresh frame and the
+GUI stopped, without any command (`docs/DEVICE.md`).
