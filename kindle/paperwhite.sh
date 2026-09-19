@@ -13,6 +13,10 @@
 #   paperwhite.log      one line per event
 #
 # Usage: paperwhite.sh start|stop|once|status|toggle   (loop: internal, used by start)
+#
+# Power: after each refresh the device stays awake AWAKE_SECONDS for taps, then suspends
+# with an RTC alarm for the next refresh (SUSPEND="yes"). A tap while suspended does
+# nothing; the power button wakes the device and opens a new tap window.
 
 BASE="/mnt/us/paperwhite"
 CONFIG="$BASE/config"
@@ -30,9 +34,12 @@ SERVER_URL=""
 REFRESH_MINUTES="15"
 FULL_REFRESH_EVERY="4"
 TAP_WINDOW_SECONDS="60"
+SUSPEND="yes"
+AWAKE_SECONDS="90"
 STOP_FRAMEWORK="yes"
 FRONTLIGHT="0"
 LOG_LINES="500"
+RTC_WAKEALARM="/sys/class/rtc/rtc0/wakealarm"
 
 log() {
     printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG"
@@ -58,6 +65,8 @@ load_config() {
     REFRESH_MINUTES="$(positive_int_or "$REFRESH_MINUTES" 15)"
     FULL_REFRESH_EVERY="$(positive_int_or "$FULL_REFRESH_EVERY" 4)"
     TAP_WINDOW_SECONDS="$(positive_int_or "$TAP_WINDOW_SECONDS" 60)"
+    AWAKE_SECONDS="$(positive_int_or "$AWAKE_SECONDS" 90)"
+    case "$SUSPEND" in yes|no) ;; *) SUSPEND="yes" ;; esac
     SERVER_PORT="$(positive_int_or "$SERVER_PORT" 8765)"
     case "$FRONTLIGHT" in ''|*[!0-9]*) FRONTLIGHT="0" ;; esac
     ORIENTATION="$(cat "$STATE/orientation" 2>/dev/null)"
@@ -183,6 +192,36 @@ release_screen() {
     fi
 }
 
+# --- suspend -------------------------------------------------------------------------
+
+can_suspend() {
+    [ "$SUSPEND" = "yes" ] && [ -w "$RTC_WAKEALARM" ] && [ -w /sys/power/state ]
+}
+
+suspend_until() {
+    # $1: epoch seconds. Sets the RTC alarm and suspends; returns after resume.
+    now="$(date +%s)"
+    [ "$1" -gt $((now + 5)) ] || return 1
+    echo 0 > "$RTC_WAKEALARM" 2>/dev/null
+    echo "$1" > "$RTC_WAKEALARM" 2>/dev/null || { log "suspend: cannot set wakealarm"; return 1; }
+    log "suspend for $(( $1 - now ))s (battery $(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null)%)"
+    sync
+    echo mem > /sys/power/state 2>/dev/null || { log "suspend: echo mem failed"; return 1; }
+    log "resumed"
+    return 0
+}
+
+wait_for_wifi() {
+    # Up to $1 seconds for wifid to report CONNECTED after a resume.
+    i=0
+    while [ "$i" -lt "$1" ]; do
+        [ "$(lipc-get-prop com.lab126.wifid cmState 2>/dev/null)" = "CONNECTED" ] && return 0
+        sleep 1; i=$((i + 1))
+    done
+    log "wifi: not connected after $1s"
+    return 1
+}
+
 # --- main loop -----------------------------------------------------------------------
 
 run_loop() {
@@ -190,24 +229,43 @@ run_loop() {
     take_screen
     cycle=0
     while :; do
-        fetch_frame
+        wait_for_wifi 30
+        if fetch_frame; then result="fresh"; else result="cached"; fi
         if [ $((cycle % FULL_REFRESH_EVERY)) -eq 0 ]; then paint full; else paint partial; fi
+        log "refresh: $result $ORIENTATION (battery $(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null)%)"
         cycle=$((cycle + 1))
-        # Sleep until the next refresh, but wake on a tap to switch orientation.
         deadline=$(( $(date +%s) + REFRESH_MINUTES * 60 ))
+        # Awake window: read taps for AWAKE_SECONDS (or until the deadline), then suspend
+        # until the deadline if allowed, otherwise keep reading taps until then.
         while :; do
-            remaining=$(( deadline - $(date +%s) ))
+            now="$(date +%s)"
+            remaining=$(( deadline - now ))
             [ "$remaining" -gt 0 ] || break
+            if can_suspend && [ "$awake_until" ] && [ "$now" -ge "$awake_until" ]; then
+                if suspend_until "$deadline"; then
+                    # An early resume (power button) gets a fresh tap window.
+                    awake_until=$(( $(date +%s) + AWAKE_SECONDS ))
+                    continue
+                fi
+            fi
+            [ "$awake_until" ] || awake_until=$(( now + AWAKE_SECONDS ))
             window="$TAP_WINDOW_SECONDS"
             [ "$remaining" -lt "$window" ] && window="$remaining"
+            if can_suspend; then
+                until_awake=$(( awake_until - now ))
+                [ "$until_awake" -lt "$window" ] && window="$until_awake"
+                [ "$window" -gt 0 ] || window=1
+            fi
             if wait_for_tap "$window"; then
                 drain_touch
                 toggle_orientation
                 fetch_frame
                 paint full
                 cycle=0
+                awake_until=$(( $(date +%s) + AWAKE_SECONDS ))
             fi
         done
+        awake_until=""
     done
 }
 
