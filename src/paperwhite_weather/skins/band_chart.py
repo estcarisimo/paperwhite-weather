@@ -114,11 +114,16 @@ def draw_band_chart(
                 anchor=anchor,
             )
         if k == 0 and current is not None:
+            # The ring marks the current temperature only when it has clear room between
+            # the two dots; near either one it would merge with it, and the hero shows
+            # the number anyway.
             y = y_of(current)
             r = px(_RING_RADIUS)
             halo = r + px(5)
-            draw.ellipse((x - halo, y - halo, x + halo, y + halo), fill=WHITE)
-            draw.ellipse((x - r, y - r, x + r, y + r), outline=BLACK, width=px(5), fill=WHITE)
+            clearance = halo + px(_DOT_RADIUS) + px(4) + px(4)
+            if all(abs(y - dot_y) >= clearance for dot_y in (high_points[k][1], low_points[k][1])):
+                draw.ellipse((x - halo, y - halo, x + halo, y + halo), fill=WHITE)
+                draw.ellipse((x - r, y - r, x + r, y + r), outline=BLACK, width=px(5), fill=WHITE)
         probability = day.precipitation_probability
         if probability is not None:
             drop = px(_DROP_SIZE)

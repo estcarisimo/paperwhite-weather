@@ -90,3 +90,39 @@ def test_one_day_no_probability_and_a_tiny_box_degrade_gracefully() -> None:
     assert _render(flat, (600, 400), current=60).getextrema()[0] == 0
     assert _render([], (600, 400)).getextrema() == (255, 255)
     assert _render(_days(), (300, 60)).getextrema() == (255, 255)  # no room for curves
+
+
+@pytest.mark.behaviour
+@pytest.mark.parametrize("current", [75, 74, 72, 70, 66, 60, 58, 57])
+def test_ring_never_touches_the_dots(current: float) -> None:
+    """Today's ring appears only with clear room; the high and low dots are never overpainted.
+
+    Currents stay within the week's range so the axis, and the dots, are the same in both
+    renders; the checked box is the dot plus its white halo.
+    """
+    days = _days()
+    plain = _render(days, (960, 520), current=None)
+    marked = _render(days, (960, 520), current=current)
+    column = 960 / len(days)
+    x = 20 + column * 0.5
+    # The dots of today's column: the topmost and bottommost dark pixels on its center line.
+    rows = [
+        y for y in range(20 + 96 + 12 + 34 + 72, 540 - 76) if plain.getpixel((round(x), y)) < 128
+    ]
+    high_y, low_y = min(rows), max(rows)
+    for center in (high_y + 9, low_y - 9):
+        box = (round(x) - 13, center - 13, round(x) + 13, center + 13)
+        assert marked.crop(box).tobytes() == plain.crop(box).tobytes(), "a dot was touched"
+
+
+def test_ring_is_drawn_when_there_is_room_and_skipped_on_a_flat_day() -> None:
+    days = _days()
+    assert (
+        _render(days, (960, 520), current=66).tobytes()
+        != _render(days, (960, 520), current=None).tobytes()
+    )
+    flat = [d.model_copy(update={"temperature_low": 60.0, "temperature_high": 60.0}) for d in days]
+    assert (
+        _render(flat, (960, 520), current=60).tobytes()
+        == _render(flat, (960, 520), current=None).tobytes()
+    )
