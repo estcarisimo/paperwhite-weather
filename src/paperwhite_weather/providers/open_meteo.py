@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from datetime import date, datetime, timezone
 from typing import Any, ClassVar
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 from paperwhite_weather import __version__
@@ -118,6 +118,8 @@ class OpenMeteoProvider:
     name: ClassVar[str] = "open-meteo"
 
     def __init__(self, url: str = FORECAST_URL, timeout: float = TIMEOUT_SECONDS) -> None:
+        if urlsplit(url).scheme not in ("http", "https"):
+            raise ValueError(f"forecast URL must be http(s), got {url!r}")
         self.url = url
         self.timeout = timeout
 
@@ -136,7 +138,8 @@ class OpenMeteoProvider:
         )
         logger.debug("GET %s", request.full_url)
         try:
-            with urlopen(request, timeout=self.timeout) as response:  # noqa: S310 - https, fixed host
+            # The scheme was checked in __init__, so this cannot open file:// or custom URLs.
+            with urlopen(request, timeout=self.timeout) as response:  # nosec B310
                 body = response.read()
         except HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")[:300]

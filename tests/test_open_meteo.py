@@ -223,6 +223,11 @@ def test_bad_json_raises(stub: str, body: bytes) -> None:
         OpenMeteoProvider(url=stub).fetch(CHICAGO, Units())
 
 
+def test_non_http_url_is_rejected() -> None:
+    with pytest.raises(ValueError, match="http"):
+        OpenMeteoProvider(url="file:///etc/passwd")
+
+
 def test_unreachable_host_raises() -> None:
     provider = OpenMeteoProvider(url="http://127.0.0.1:9/v1/forecast", timeout=2)
     with pytest.raises(OpenMeteoError, match="could not reach"):
