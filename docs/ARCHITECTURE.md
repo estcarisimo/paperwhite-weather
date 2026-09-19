@@ -166,7 +166,7 @@ ShellCheck in CI from Sprint 3. Writing our own native display code is out of sc
 - **Orientation.** Skins compose on `Display.canvas_size`; in landscape that is
   1448x1072 and the renderer rotates the result back to the native 1072x1448 framebuffer.
 
-## Kindle side (design, to be validated in Sprint 1)
+## Kindle side (design; the client script is Sprint 3)
 
 A shell script started from KUAL (the jailbreak launcher) loops:
 
