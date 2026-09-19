@@ -9,6 +9,7 @@ import pytest
 from PIL import Image, ImageDraw
 
 from paperwhite_weather.models import SunTimes
+from paperwhite_weather.skins import sun_arc
 from paperwhite_weather.skins.sun_arc import draw_sun_arc
 
 TZ = ZoneInfo("America/Chicago")
@@ -100,3 +101,20 @@ def test_narrow_box_keeps_sunrise_and_sunset_apart(sun: SunTimes) -> None:
     assert ink, "no labels drawn"
     gaps = [b - a for a, b in zip(ink, ink[1:], strict=False) if b - a > 12]
     assert gaps, "sunrise and sunset labels run together"
+
+
+@pytest.mark.behaviour
+@pytest.mark.parametrize("size", [(560, 170), (430, 220), (635, 160), (567, 300)])
+@pytest.mark.parametrize(
+    "offset", [timedelta(minutes=1), timedelta(minutes=5), timedelta(minutes=25)]
+)
+def test_moon_stays_clear_of_the_labels_at_the_edges_of_the_night(
+    sun: SunTimes, size: tuple[int, int], offset: timedelta
+) -> None:
+    """Just after dusk and just before dawn the moon sits near an end of the arc; a white
+    band separates it from the label row, so it never touches the sunrise or sunset time."""
+    for moment in (sun.civil_dusk + offset, sun.civil_dawn - offset):
+        image = _render(sun, moment, size, 1.0)
+        label_top = 20 + size[1] - (sun_arc._LABEL_SIZE + 8) + 4
+        band = image.crop((20, label_top - 4, 20 + size[0], label_top))
+        assert band.getextrema() == (255, 255), f"ink touches the label row at {moment:%H:%M}"

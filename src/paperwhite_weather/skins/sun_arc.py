@@ -116,22 +116,6 @@ def draw_sun_arc(
     arc(math.pi, 0, BLACK, px(_ARC_WIDTH))  # the day
     draw.line([(left, horizon_y), (right - 1, horizon_y)], fill=BLACK, width=px(_HORIZON_WIDTH))
 
-    # The sun: a filled disc on the arc by day; a crescent on the night half otherwise.
-    if sun.civil_dawn <= now <= sun.civil_dusk:
-        x, y = point(angle(now))
-        ring = sun_r + px(5)
-        draw.ellipse((x - ring, y - ring, x + ring, y + ring), fill=WHITE)
-        draw.ellipse((x - sun_r, y - sun_r, x + sun_r, y + sun_r), fill=BLACK)
-    else:
-        next_dawn = sun.civil_dawn + timedelta(days=1)
-        moment = now + timedelta(days=1) if now < sun.civil_dawn else now
-        night = fraction(moment, sun.civil_dusk, next_dawn)
-        x, _ = point(-phi - night * (math.pi - 2 * phi))
-        moon = min(px(_MOON_SIZE), 2 * (night_depth + px(10)))
-        glyph = Glyph(draw, x, horizon_y + moon * 0.45, moon)
-        glyph.dot(0.0, 0.0, 0.8, WHITE)
-        glyph.moon(0.0, 0.0, 0.55)
-
     # Labels: sunrise under the left end, sunset under the right; both shrink together
     # until they fit side by side. Dawn and dusk go between them when there is room.
     def clock(moment: datetime) -> str:
@@ -148,17 +132,36 @@ def draw_sun_arc(
         if needed + px(16) <= width:
             break
         label_size -= 1
+    label_w = (
+        draw.textlength(sunrise_text, font=label_font),
+        draw.textlength(sunset_text, font=label_font),
+    )
+
+    # The sun: a filled disc on the arc by day; a crescent on the night half otherwise.
+    if sun.civil_dawn <= now <= sun.civil_dusk:
+        x, y = point(angle(now))
+        ring = sun_r + px(5)
+        draw.ellipse((x - ring, y - ring, x + ring, y + ring), fill=WHITE)
+        draw.ellipse((x - sun_r, y - sun_r, x + sun_r, y + sun_r), fill=BLACK)
+    else:
+        next_dawn = sun.civil_dawn + timedelta(days=1)
+        moment = now + timedelta(days=1) if now < sun.civil_dawn else now
+        night = fraction(moment, sun.civil_dusk, next_dawn)
+        x, _ = point(-phi - night * (math.pi - 2 * phi))
+        # The crescent's bottom (0.725 of its size below its box top) stays above the
+        # label row, and its box stays clear of the sunrise and sunset labels.
+        moon = min(px(_MOON_SIZE), round((night_depth + px(6)) / 0.725))
+        x = min(max(x, left + label_w[0] + moon / 2 + px(4)), right - label_w[1] - moon / 2 - px(4))
+        glyph = Glyph(draw, x, horizon_y + moon * 0.45, moon)
+        glyph.dot(0.0, 0.0, 0.8, WHITE)
+        glyph.moon(0.0, 0.0, 0.55)
+
     label_y = bottom - label_h + px(4)
     draw.text((left, label_y), sunrise_text, font=label_font, fill=BLACK, anchor="la")
     draw.text((right, label_y), sunset_text, font=label_font, fill=BLACK, anchor="ra")
     small_font = load_font("regular", px(_SMALL_LABEL_SIZE))
     twilight = f"Dawn {clock(sun.civil_dawn)}  ·  Dusk {clock(sun.civil_dusk)}"
-    room = (
-        width
-        - draw.textlength(sunrise_text, font=label_font)
-        - draw.textlength(sunset_text, font=label_font)
-        - px(48)
-    )
+    room = width - label_w[0] - label_w[1] - px(48)
     if draw.textlength(twilight, font=small_font) <= room:
         draw.text(
             (center_x, label_y + px(6)), twilight, font=small_font, fill=DARK_GRAY, anchor="ma"
