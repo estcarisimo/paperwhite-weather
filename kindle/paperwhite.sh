@@ -241,6 +241,7 @@ with_writable_root() {
     "$@"
     rc=$?
     mntroot ro > /dev/null 2>&1
+    [ "$rc" -eq 0 ] || echo "$* failed on the root filesystem (exit $rc)" >&2
     return "$rc"
 }
 

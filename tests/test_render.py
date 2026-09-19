@@ -24,9 +24,9 @@ def test_registry_lists_every_skin() -> None:
         get_skin("nope")
 
 
-@pytest.mark.parametrize("skin", ["big-clock", "forecast", "newspaper", "weather-station"])
+@pytest.mark.parametrize("skin", available_skins())
 @pytest.mark.parametrize("orientation", ["portrait", "landscape"])
-def test_new_skins_keep_margins_clear_and_handle_sparse_data(
+def test_skins_keep_margins_clear_and_handle_sparse_data(
     snapshot: WeatherSnapshot, settings: Settings, skin: str, orientation: str
 ) -> None:
     """The outer 1.5 % border stays white, and a snapshot with no optional data renders."""
