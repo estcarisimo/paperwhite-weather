@@ -38,7 +38,8 @@ src/paperwhite_weather/
                     all bundled in assets/fonts/
   icons.py          draw_icon(draw, condition, box, night): monochrome vector icons, one per
                     Condition, moon variants for clear and partly cloudy at night;
-                    draw_drop(draw, box, level): a drop filled to a fraction; Glyph helper
+                    draw_drop(draw, box, level): a drop filled to a fraction; draw_wind,
+                    draw_thermometer: metric glyphs; Glyph helper
   sun.py            compute_sun_times(location, day) -> SunTimes via astral (civil twilight)
   providers/        base.py (WeatherProvider protocol), mock.py (fixture data),
                     open_meteo.py (live: build_query, parse_forecast, WMO_CONDITIONS,
@@ -48,8 +49,11 @@ src/paperwhite_weather/
                     (draw_sun_arc: the day's arc over a horizon line, sun marked),
                     temperature_bars.py (draw_temperature_bars: days as low-high bars on one
                     axis, today marked), common.py (Canvas: scaled px(), text(), rule(), icon(),
-                    sun_arc(), temperature_bars(), day_columns(), footer(), metrics()),
-                    minimal.py, newspaper.py, weather_station.py, big_clock.py, forecast.py;
+                    sun_arc(), temperature_bars(), band_chart(), day_columns(), metrics_strip(),
+                    number(), footer(), metrics()),
+                    band_chart.py (draw_band_chart: the week's highs and lows as two curves
+                    with the band between), minimal.py, newspaper.py, weather_station.py,
+                    big_clock.py, forecast.py, graphic.py;
                     registry in __init__.py: get_skin(name), available_skins()
   render.py         render_dashboard(snapshot, settings, now) -> "L" image at native size;
                     render_offline(settings, last_attempt_at, message); quantize_grayscale(image, levels)

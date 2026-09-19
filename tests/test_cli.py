@@ -23,6 +23,7 @@ def test_lists() -> None:
     assert runner.invoke(app, ["skins"]).output.split() == [
         "big-clock",
         "forecast",
+        "graphic",
         "minimal",
         "newspaper",
         "weather-station",
@@ -169,6 +170,6 @@ def test_gallery_renders_every_skin_in_both_orientations(tmp_path: Path) -> None
     )
     assert result.exit_code == 0, result.output
     files = sorted(p.name for p in (tmp_path / "g").glob("*.png"))
-    assert len(files) == 10 and "newspaper-landscape.png" in files
+    assert len(files) == 12 and "newspaper-landscape.png" in files
     with Image.open(tmp_path / "g" / "big-clock-portrait.png") as image:
         assert image.size == (1072, 1448)
