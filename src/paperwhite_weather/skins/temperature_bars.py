@@ -179,11 +179,11 @@ def draw_temperature_bars(
             # The marker, ring included, stays within the bar's extent so it never
             # touches the values at the ends (current at, or beyond, the low or high).
             # A bar narrower than the full-size marker (a flat or near-flat day) gets a
-            # smaller one, so the clamp below is always a valid interval.
+            # smaller one: ``ring`` never exceeds the bar's half width, so the clamp's
+            # interval [x_lo + ring, x_hi - ring] is never empty.
             half = (x_hi - x_lo) / 2
             ring = min(bar_h * 0.9 + px(4), half)
             r = max(ring - px(4), ring * 0.6)
-            assert x_lo + ring <= x_hi - ring
             cx = min(max(x_of(row.current), x_lo + ring), x_hi - ring)
             draw.ellipse((cx - ring, cy - ring, cx + ring, cy + ring), fill=WHITE)
             draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=BLACK)
