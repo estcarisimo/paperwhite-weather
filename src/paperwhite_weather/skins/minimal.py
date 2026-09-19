@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw
 
 from paperwhite_weather.config import Settings
 from paperwhite_weather.fonts import load_font
-from paperwhite_weather.models import DailyForecast, WeatherSnapshot
+from paperwhite_weather.models import WeatherSnapshot
 from paperwhite_weather.skins.base import (
     BLACK,
     CONDITION_LABELS,
@@ -26,6 +26,7 @@ from paperwhite_weather.skins.base import (
     format_temperature,
 )
 from paperwhite_weather.skins.sun_arc import draw_sun_arc
+from paperwhite_weather.skins.temperature_bars import draw_temperature_bars, rows_for_days
 
 #: The layout is designed for the Paperwhite 3 canvas (1072x1448 portrait, 1448x1072
 #: landscape) and scaled down uniformly when the actual canvas is smaller.
@@ -92,12 +93,12 @@ class _Frame:
         y = self.lead(x, y + self.px(40), content_width)
         y = self.sun_arc(x, y + self.px(30), content_width, self.px(250))
         y = self.rule(x, y + self.px(30), content_width, LIGHT_GRAY, 2)
-        self.forecast_columns(x, y + self.px(40), content_width)
+        self.temperature_bars(x, y + self.px(24), content_width, long_names=True)
         self.footer()
 
     def compose_landscape(self) -> None:
         gutter = self.px(60)
-        left_width = round((self.width - 2 * self.margin - gutter) * 0.56)
+        left_width = round((self.width - 2 * self.margin - gutter) * 0.45)
         right_x = self.margin + left_width + gutter
         right_width = self.width - self.margin - right_x
 
@@ -107,8 +108,7 @@ class _Frame:
         y = self.lead(self.margin, y + self.px(50), left_width)
         self.sun_arc(self.margin, y + self.px(70), left_width, self.px(300))
 
-        y = self.margin + self.px(20)
-        self.forecast_rows(right_x, y, right_width)
+        self.temperature_bars(right_x, self.margin + self.px(10), right_width)
         self.footer()
 
     # Building blocks; each returns the y coordinate below what it drew.
@@ -132,27 +132,16 @@ class _Frame:
         return y + self.px(thickness)
 
     def lead(self, x: int, y: int, width: int) -> int:
-        """Current temperature with conditions and today's range beside it."""
+        """Current temperature with the condition and feels-like beside it."""
         current = self.snapshot.current
-        today = self.snapshot.today
         temperature = format_temperature(current.temperature)
         font = fit_font(self.draw, temperature, "bold", self.px(210), width * 0.5)
         self.draw.text((x, y), temperature, font=font, fill=BLACK, anchor="la")
         detail_x = x + round(self.draw.textlength(temperature, font=font)) + self.px(30)
         detail_width = x + width - detail_x
-        lines = [
-            (CONDITION_LABELS[current.condition], 56, BLACK),
-            (
-                f"H {format_temperature(today.temperature_high)}   "
-                f"L {format_temperature(today.temperature_low)}",
-                48,
-                DARK_GRAY,
-            ),
-        ]
-        if today.precipitation_probability is not None:
-            lines.append(
-                (f"Precipitation {round(today.precipitation_probability)}%", 40, DARK_GRAY)
-            )
+        lines = [(CONDITION_LABELS[current.condition], 56, BLACK)]
+        if current.feels_like is not None:
+            lines.append((f"Feels like {format_temperature(current.feels_like)}", 48, DARK_GRAY))
         line_y = y + self.px(30)
         for text, size, fill in lines:
             line_font = fit_font(self.draw, text, "regular", self.px(size), detail_width)
@@ -173,70 +162,12 @@ class _Frame:
         )
         return y + height
 
-    def upcoming(self) -> list[DailyForecast]:
-        return self.snapshot.daily[1 : _FORECAST_DAYS + 1]
-
-    def forecast_columns(self, x: int, y: int, width: int) -> int:
-        """Next days side by side (portrait)."""
-        days = self.upcoming()
-        if not days:
-            return y
-        column = width / len(days)
-        for index, day in enumerate(days):
-            center = x + column * (index + 0.5)
-            self.draw.text(
-                (center, y),
-                f"{day.date:%a}",
-                font=load_font("bold", self.px(40)),
-                fill=BLACK,
-                anchor="ma",
-            )
-            self.draw.text(
-                (center, y + self.px(55)),
-                CONDITION_LABELS[day.condition],
-                font=fit_font(
-                    self.draw,
-                    CONDITION_LABELS[day.condition],
-                    "regular",
-                    self.px(28),
-                    column * 0.95,
-                ),
-                fill=DARK_GRAY,
-                anchor="ma",
-            )
-            self.draw.text(
-                (center, y + self.px(100)),
-                _temperature_range(day),
-                font=load_font("regular", self.px(36)),
-                fill=BLACK,
-                anchor="ma",
-            )
-        return y + self.px(150)
-
-    def forecast_rows(self, x: int, y: int, width: int) -> int:
-        """Next days as rows: weekday, condition, high / low (landscape)."""
-        row_height = self.px(96)
-        day_font = load_font("bold", self.px(40))
-        range_font = load_font("regular", self.px(40))
-        for day in self.upcoming():
-            self.draw.text((x, y), f"{day.date:%a}", font=day_font, fill=BLACK, anchor="la")
-            condition = CONDITION_LABELS[day.condition]
-            self.draw.text(
-                (x + self.px(110), y + self.px(6)),
-                condition,
-                font=fit_font(self.draw, condition, "regular", self.px(32), width * 0.45),
-                fill=DARK_GRAY,
-                anchor="la",
-            )
-            self.draw.text(
-                (x + width, y),
-                _temperature_range(day),
-                font=range_font,
-                fill=BLACK,
-                anchor="ra",
-            )
-            y += row_height
-        return y
+    def temperature_bars(self, x: int, y: int, width: int, long_names: bool = False) -> int:
+        """Today and the next days as bars on one scale, down to the footer."""
+        rows = rows_for_days(self.snapshot, self.snapshot.daily[: _FORECAST_DAYS + 1], long_names)
+        bottom = self.height - self.margin - self.px(50)
+        draw_temperature_bars(self.draw, (x, y, x + width, bottom), rows, self.scale)
+        return bottom
 
     def footer(self) -> None:
         """Data freshness and units, bottom right, so stale data is obvious."""
@@ -252,7 +183,3 @@ class _Frame:
             fill=DARK_GRAY,
             anchor="rd",
         )
-
-
-def _temperature_range(day: DailyForecast) -> str:
-    return f"{format_temperature(day.temperature_high)} / {format_temperature(day.temperature_low)}"

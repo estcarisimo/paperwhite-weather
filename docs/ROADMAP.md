@@ -119,9 +119,11 @@ The first versions read well; the direction is **fewer words, more pictures**.
       as gray bands. One icon-like element replaces "Dawn 6:12 AM  Sunrise 6:40 AM ..."
       (2026-09-19, `skins/sun_arc.py`, in the four graphic skins; to be judged on the
       panel).
-- [ ] **Temperature range as a scale**: today's low/high (and the forecast days') drawn
+- [x] **Temperature range as a scale**: today's low/high (and the forecast days') drawn
       as horizontal bars on a shared axis, with the current temperature marked, rather
-      than "H 75°  L 57°" text. Aligned bars make the week comparable at a glance.
+      than "H 75°  L 57°" text. Aligned bars make the week comparable at a glance
+      (2026-09-19, `skins/temperature_bars.py`, in `minimal`, `weather-station`,
+      `forecast`; `big-clock` keeps its one line; to be judged on the panel).
 - [ ] **Less text where a symbol carries the meaning**: precipitation probability as a
       drop icon with the number, wind as an arrow with the speed, humidity as a
       half-filled drop. The `newspaper` skin stays deliberately textual; the other four

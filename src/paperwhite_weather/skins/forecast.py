@@ -44,19 +44,10 @@ class ForecastSkin:
         temp = c.temperature(snapshot.current.temperature)
         c.text((x, y - c.px(20)), temp, "bold", temp_size, anchor="la", max_width=w * 0.45)
         x2 = x + c.text_width(temp, "bold", temp_size) + c.px(30)
-        today = snapshot.today
         lines = [
             (c.condition_label(snapshot.current.condition), 46 if c.landscape else 52, BLACK),
-            (c.high_low(today), 40 if c.landscape else 44, DARK_GRAY),
+            (c.feels_like_text(), 40 if c.landscape else 44, DARK_GRAY),
         ]
-        if today.precipitation_probability is not None:
-            lines.append(
-                (
-                    f"Precipitation {round(today.precipitation_probability)}%",
-                    36 if c.landscape else 40,
-                    DARK_GRAY,
-                )
-            )
         arc_left = c.width - m - c.px(430)
         text_right = arc_left - c.px(30) if c.landscape else c.width - m
         ly = y + c.px(20)
@@ -74,57 +65,10 @@ class ForecastSkin:
         y = c.rule(m, y, w, LIGHT_GRAY, 2)
         y += c.px(30)
 
-        # Forecast: every day including today, as columns (portrait) or rows (landscape).
+        # Forecast: every day including today as temperature bars on one scale.
         days = snapshot.daily[:_MAX_DAYS]
-        if c.landscape:
-            column = w / len(days)
-            icon = c.px(150)
-            for k, day in enumerate(days):
-                cx = m + column * (k + 0.5)
-                label = "Today" if k == 0 else f"{day.date:%a}"
-                c.text((cx, y), label, "bold", 44, anchor="ma")
-                c.icon(
-                    day.condition, (cx - icon / 2, y + c.px(60), cx + icon / 2, y + c.px(60) + icon)
-                )
-                c.text(
-                    (cx, y + c.px(60) + icon + c.px(20)),
-                    c.range_text(day),
-                    "regular",
-                    40,
-                    anchor="ma",
-                    max_width=column * 0.95,
-                )
-                if day.precipitation_probability is not None:
-                    c.text(
-                        (cx, y + c.px(60) + icon + c.px(75)),
-                        f"{round(day.precipitation_probability)}%",
-                        "regular",
-                        34,
-                        fill=DARK_GRAY,
-                        anchor="ma",
-                    )
-        else:
-            row = (c.height - m - c.px(60) - y) / len(days)
-            icon = min(c.px(120), round(row * 0.8))
-            for k, day in enumerate(days):
-                top = y + row * k
-                cy = top + row / 2
-                label = "Today" if k == 0 else f"{day.date:%A}"
-                c.text((m, cy), label, "bold", 46, anchor="lm", max_width=w * 0.34)
-                c.icon(
-                    day.condition, (m + w * 0.38, cy - icon / 2, m + w * 0.38 + icon, cy + icon / 2)
-                )
-                c.text((c.width - m, cy - c.px(14)), c.range_text(day), "regular", 46, anchor="rm")
-                if day.precipitation_probability is not None:
-                    c.text(
-                        (c.width - m, cy + c.px(36)),
-                        f"{round(day.precipitation_probability)}%",
-                        "regular",
-                        32,
-                        fill=DARK_GRAY,
-                        anchor="rm",
-                    )
-                if k:
-                    c.rule(m, top, w, LIGHT_GRAY, 1)
+        c.temperature_bars(
+            (m, y, c.width - m, c.height - m - c.px(50)), days, long_names=not c.landscape
+        )
         c.footer()
         return c.image

@@ -19,6 +19,7 @@ displays it.
 
 - 🖼️ **Kindle-native rendering**: 1072x1448 grayscale PNG, quantized to the panel's 16 gray levels, landscape (default) or portrait, each with its own layout
 - 🎨 **Five skins on one data model**: `minimal`, `newspaper`, `weather-station`, `big-clock`, `forecast`; each has a portrait and a landscape layout, and all draw from the same snapshot
+- 🌡️ **The week on one scale**: each day's low-to-high as a bar on a shared axis, today's bar marked at the current temperature
 - 🔌 **Pluggable providers**: Open-Meteo for live data (no API key), a deterministic `mock` provider for development
 - 🌤️ **Monochrome icons** drawn with vector primitives, so they scale to any panel and carry no license baggage
 - 🌅 **The sun's day as one graphic**: an arc over the horizon from civil dawn to civil dusk, the sun marked where it is now, computed locally from your coordinates
@@ -169,9 +170,9 @@ portrait. `paperwhite gallery` produces all of these; CI uploads them on every r
 ## 🗺️ Roadmap
 
 The five skins above are first versions. The next round makes them **more graphic and
-less textual**: the sun arc above is the first step; next are temperature ranges as bars
-on a shared scale instead of "H 75° L 57°", precipitation and wind as icons with a
-number, and a review of every icon on the physical panel. The `newspaper` skin stays
+less textual**: the sun arc and the temperature bars are the first steps; next are
+precipitation and wind as icons with a number, and a review of every icon on the physical
+panel. The `newspaper` skin stays
 text-first on purpose. The full plan, with what is done and what is open, is in
 [`docs/ROADMAP.md`](docs/ROADMAP.md); ideas are welcome as issues.
 

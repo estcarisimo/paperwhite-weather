@@ -33,6 +33,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   labeled, a filled disc where the sun is now (hollow under the horizon at night). Used
   by `minimal`, `weather-station`, `big-clock`, and `forecast` in place of the four
   labeled clocks; `newspaper` keeps its sentence.
+- Temperature ranges as bars on one shared scale (`skins/temperature_bars.py`): one row
+  per day with the condition icon, a bar from low to high, the values at its ends, the
+  precipitation probability in gray, and a disc on today's bar at the current
+  temperature. `minimal`, `weather-station`, and `forecast` show today and the next days
+  this way instead of "H 75° L 57°" and "66° / 54°" lists; the current-conditions block
+  shows the feels-like temperature instead. Narrow boxes give up the notes, then the
+  icons, before the bars get too short.
 - `paperwhite gallery` renders every skin in both orientations; CI uploads the result.
   Golden-image tests in `tests/goldens/` pin each frame.
 - `--orientation` option on `paperwhite render` to override the configured orientation.
