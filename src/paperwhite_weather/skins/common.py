@@ -25,6 +25,7 @@ from paperwhite_weather.skins.base import (
     format_temperature,
 )
 from paperwhite_weather.skins.sun_arc import draw_sun_arc
+from paperwhite_weather.skins.temperature_bars import TemperatureRow, draw_temperature_bars
 
 DESIGN_PORTRAIT = (1072, 1448)
 DESIGN_LANDSCAPE = (1448, 1072)
@@ -108,6 +109,47 @@ class Canvas:
         )
         return bottom
 
+    def temperature_rows(
+        self, days: list[DailyForecast], long_names: bool = False
+    ) -> list[TemperatureRow]:
+        """Bar rows for ``days``: today is labeled and carries the current temperature."""
+        today = self.snapshot.today.date
+        current = self.snapshot.current.temperature
+        rows = []
+        for day in days:
+            is_today = day.date == today
+            label = "Today" if is_today else f"{day.date:%A}" if long_names else f"{day.date:%a}"
+            note = None
+            if day.precipitation_probability is not None:
+                note = f"{round(day.precipitation_probability)}%"
+            rows.append(
+                TemperatureRow(
+                    label=label,
+                    low=day.temperature_low,
+                    high=day.temperature_high,
+                    condition=day.condition,
+                    current=current if is_today else None,
+                    note=note,
+                )
+            )
+        return rows
+
+    def temperature_bars(
+        self,
+        box: tuple[float, float, float, float],
+        days: list[DailyForecast],
+        long_names: bool = False,
+    ) -> int:
+        """Draw ``days`` as temperature bars on a shared scale in ``box``; returns its bottom."""
+        left, top, right, bottom = (round(v) for v in box)
+        draw_temperature_bars(
+            self.draw,
+            (left, top, right, bottom),
+            self.temperature_rows(days, long_names),
+            self.scale,
+        )
+        return bottom
+
     # Formatting shortcuts
 
     def clock(self, moment: datetime | None = None) -> str:
@@ -130,6 +172,11 @@ class Canvas:
 
     def condition_label(self, condition: Condition) -> str:
         return CONDITION_LABELS[condition]
+
+    def feels_like_text(self) -> str:
+        """``"Feels like 68°"``, or an empty string when the provider has no value."""
+        feels = self.snapshot.current.feels_like
+        return "" if feels is None else f"Feels like {self.temperature(feels)}"
 
     def footer(self) -> None:
         """Data freshness and units, bottom right, so stale data is obvious."""
