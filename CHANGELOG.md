@@ -36,7 +36,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - Decision record in `docs/ARCHITECTURE.md`: architecture accepted; landscape default;
   both orientations served; tap to switch orientation; DNS-name discovery on port 8765.
 - Jailbreak runbook for the Paperwhite 3 on 5.16.2.1.1 in `docs/DEVICE.md`, with a
-  legal and warranty note.
+  legal and warranty note; executed 2026-09-18/19, with the verified device facts (panel
+  1072x1448 8-bit gray, `eips` path, touch node `event1`, RTC `wakealarm`, discovery of
+  the Pi by DNS name and the first live frame on the panel).
 
 ### Changed
 - Default orientation is now `landscape` (was `portrait`).

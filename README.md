@@ -9,8 +9,11 @@ displays it.
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> **Status: foundation (Sprint 0).** The renderer, data model, CLI, and a first skin work
-> today with fixture data. Nothing runs on the Kindle yet; see [`docs/ROADMAP.md`](docs/ROADMAP.md).
+> **Status: device bring-up (Sprint 1 done, 2026-09-19).** The renderer, data model, CLI,
+> a first skin, and the LAN service work today with fixture data. The Kindle is jailbroken,
+> reachable over SSH, and has displayed a live frame fetched from the service by DNS name.
+> Unattended operation on the device (Sprint 3) and live weather (Sprint 2) are next; see
+> [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## ✨ Features
 

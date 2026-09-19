@@ -69,7 +69,8 @@ On 2026-09-18 the service answered on `http://smokingpi.lan:8765/` from the Pi i
 (`getent hosts smokingpi.lan` → `192.168.86.27`, resolved by the router). Whether your
 router resolves `<hostname>.lan` is router-specific; `/health` reports the server's
 `hostname`, and the Kindle client falls back to a subnet scan (see `docs/ARCHITECTURE.md`).
-Checking the URL from the Kindle is a Sprint 1 task.
+Verified from the Kindle on 2026-09-19: `wget` of `/health` and `/dashboard.png` by that
+name worked on the device (`docs/DEVICE.md`).
 
 The unit runs the mock provider until a live provider exists; set
 `PAPERWHITE_PROVIDER` in `.env` when it does.

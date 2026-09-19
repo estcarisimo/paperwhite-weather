@@ -27,23 +27,24 @@ Done: CI green on `main`, ruleset active, decision accepted.
 
 Goal: shell access to the Kindle and a static image on its screen.
 
-- [ ] Jailbreak the Paperwhite 3 with WinterBreak2 (runbook in `docs/DEVICE.md`:
-      fill the disk against OTA, stage `winterbreak2/`, browser step on the device);
-      install KUAL, MRPI, USBNetwork.
-- [ ] Record `eips -i`, `uname -a`, tool availability, input device nodes, and package
-      versions in `docs/DEVICE.md`; move the panel geometry from "assumed" to "verified".
-- [ ] Copy a `paperwhite render` PNG to the device and display it with `eips -g`, in both
-      orientations; confirm the landscape rotation direction.
-- [ ] From the device: `wget -O /dev/null http://<server>.lan:8765/health` to confirm
-      DNS-name discovery works from the Kindle's resolver.
-- [ ] Probe touch: which `/dev/input/event*` node fires on a tap, and whether it fires
-      with the stock GUI running.
-- [ ] Check readability of the `minimal` skin from across a room; adjust type sizes.
+- [x] Jailbreak the Paperwhite 3 with WinterBreak2 (2026-09-18); install KUAL, MRPI,
+      USBNetwork; SSH over Wi-Fi with a key (2026-09-19).
+- [x] Record `eips -i`, `uname -a`, tool availability, input device nodes, and package
+      versions in `docs/DEVICE.md`; panel geometry verified (1072x1448, 8-bit gray).
+- [x] Fetch a live frame from the Pi on the device and display it with `eips -g`
+      (2026-09-19, landscape).
+- [ ] Display the portrait frame too; confirm the landscape rotation direction as mounted.
+- [x] From the device: `wget http://smokingpi.lan:8765/health` returned the service
+      identity, so DNS-name discovery works from the Kindle's resolver (2026-09-19).
+- [x] Touch: `/dev/input/event1` (`cyttsp4_mt`) fires on a tap with the stock GUI running.
+- [x] First look at the `minimal` skin on the panel (2026-09-19): readable; the stock GUI
+      repainted over it on a tap, so a longer readability check waits for Sprint 3.
 - [ ] Measure: Wi-Fi reconnect time, whether RTC wake from suspend works, idle battery
-      drain over a night.
+      drain over a night. (Moved to Sprint 3, where the client script exercises them.)
 
-Done when: a frame rendered by this package is on the e-ink panel in landscape and
+Done: a frame rendered by this package is on the e-ink panel in landscape and
 `docs/DEVICE.md` has no "assumed" entries left for the panel, the toolchain, and touch.
+Open items above are listed again under Sprint 3.
 
 ## Sprint 2 — Live weather service (M2)
 
@@ -73,6 +74,13 @@ Goal: the dashboard runs unattended on the wall.
       fetch the image for the current orientation, display, periodic full clear against
       ghosting, RTC wake and suspend, Wi-Fi handling, fallback to the cached image.
 - [ ] Tap to toggle orientation, persisted on the device.
+- [ ] Keep our frame on screen: stop the stock GUI or repaint over it; suppress the
+      screensaver (`preventScreenSaver`).
+- [ ] Portrait frame on the panel; confirm the landscape rotation direction as mounted.
+- [ ] Measure Wi-Fi reconnect time, RTC wake from suspend (`/sys/class/rtc/rtc0/wakealarm`),
+      and idle battery drain over a night, before the week-long run.
+- [ ] Readability of the `minimal` skin from across a room, once the frame stays up;
+      adjust type sizes.
 - [ ] KUAL extension to start/stop it; install instructions verified on the device.
 - [ ] Battery measurement over a week at 15-minute refresh; decide on the clock question.
 - [ ] Photos of the device for the README.
