@@ -23,7 +23,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   The recorded Open-Meteo fixture was refreshed (2026-09-19) to include the hourly block.
 - `minimal` skin: large clock and temperature, today's range, the sun arc, and a
   four-day forecast. Portrait is a single column; landscape is a two-column layout that
-  uses the full width.
+  uses the full width. Redesigned as the quiet end of the range: the current condition
+  as an icon beside the temperature, the range under it, one short sun arc, and the
+  next four days as columns (weekday, icon, high and low, a rain drop from 20 % up)
+  instead of the bar chart, which stays in `forecast` and `weather-station`. The skin
+  now draws on the shared `Canvas` (`Canvas.day_columns` is the new block).
 - Four more skins, each with portrait and landscape layouts: `newspaper` (serif front
   page), `weather-station` (metrics grid), `big-clock`, and `forecast`. Shared drawing
   helpers in `skins/common.py`; DejaVu Serif bundled alongside DejaVu Sans.

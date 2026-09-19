@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw
 
 from paperwhite_weather.config import Settings
 from paperwhite_weather.fonts import Weight, load_font
-from paperwhite_weather.icons import draw_icon
+from paperwhite_weather.icons import draw_drop, draw_icon
 from paperwhite_weather.models import Condition, DailyForecast, WeatherSnapshot
 from paperwhite_weather.skins.base import (
     BLACK,
@@ -143,6 +143,79 @@ class Canvas:
             self.scale,
         )
         return bottom
+
+    def day_columns(self, box: tuple[float, float, float, float], days: list[DailyForecast]) -> int:
+        """Draw ``days`` as equal columns: weekday, icon, high and low, rain when likely.
+
+        A short box puts "high / low" on one line under a modest icon; a tall box (more
+        than 500 design pixels) stacks the high over the low under a large icon. Rain (a
+        drop and the probability) appears only from 20 % up, so a dry week stays quiet.
+        Returns the bottom of what was drawn.
+        """
+        left, top, right, bottom = box
+        if not days:
+            return round(top)
+        column = (right - left) / len(days)
+        tall = bottom - top > self.px(500)
+        # A tall box grows the icons and the spacing with its height, up to half again.
+        grow = min(1.25, (bottom - top) / self.px(560)) if tall else 1.0
+        icon = min(self.px((170 if tall else 120) * grow), column * 0.8, (bottom - top) * 0.4)
+        y_icon = top + self.px((90 if tall else 64) * grow)
+        y_value = y_icon + icon + self.px((50 if tall else 22) * grow)
+        y_rain = y_value + self.px((150 if tall else 70) * grow)
+        for k, day in enumerate(days):
+            cx = left + column * (k + 0.5)
+            self.text((cx, top), f"{day.date:%a}", "bold", 44 * grow if tall else 40, anchor="ma")
+            self.icon(day.condition, (cx - icon / 2, y_icon, cx + icon / 2, y_icon + icon))
+            if tall:
+                self.text(
+                    (cx, y_value),
+                    self.temperature(day.temperature_high),
+                    "bold",
+                    56 * grow,
+                    anchor="ma",
+                )
+                self.text(
+                    (cx, y_value + self.px(76 * grow)),
+                    self.temperature(day.temperature_low),
+                    "regular",
+                    48 * grow,
+                    fill=DARK_GRAY,
+                    anchor="ma",
+                )
+            else:
+                self.text(
+                    (cx, y_value),
+                    self.range_text(day),
+                    "medium",
+                    40,
+                    anchor="ma",
+                    max_width=column * 0.95,
+                )
+            probability = day.precipitation_probability
+            if probability is not None and probability >= 20:
+                drop = self.px(28 * grow)
+                x = cx - self.px(34 * grow)
+                draw_drop(
+                    self.draw,
+                    (
+                        round(x - drop / 2),
+                        round(y_rain - drop / 2),
+                        round(x + drop / 2),
+                        round(y_rain + drop / 2),
+                    ),
+                    probability / 100,
+                    DARK_GRAY,
+                )
+                self.text(
+                    (cx - self.px(14 * grow), y_rain),
+                    f"{round(probability)}%",
+                    "regular",
+                    28 * grow,
+                    fill=DARK_GRAY,
+                    anchor="lm",
+                )
+        return round(y_rain + self.px(20))
 
     # Formatting shortcuts
 
