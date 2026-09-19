@@ -1,10 +1,11 @@
 """The sun's day as one graphic: an arc over a horizon line instead of four clocks.
 
-The arc is the upper part of an ellipse. Sunrise and sunset sit on the horizon line;
-civil twilight continues the arc below the line in gray to dawn and dusk. A filled disc
-marks the sun's position by day; at night a hollow disc sits under the horizon at the
-matching stage of the night. Sunrise and sunset times are written under their marks,
-dawn and dusk smaller and in gray at the ends.
+The arc is the upper half of an ellipse from sunrise to sunset over a horizon line; the
+night half continues below the line as a faint dotted ellipse, and civil twilight is a
+short thick gray band at each end, below the horizon. A filled disc marks the sun's
+position by day; at night a crescent moon sits on the night half at the matching stage
+of the night. Sunrise and sunset times are written under their ends of the horizon; the
+civil dawn and dusk times go between them in small gray type when there is room.
 """
 
 from __future__ import annotations
@@ -15,20 +16,24 @@ from datetime import datetime, timedelta, tzinfo
 from PIL import ImageDraw
 
 from paperwhite_weather.fonts import load_font
+from paperwhite_weather.icons import Glyph
 from paperwhite_weather.models import SunTimes
-from paperwhite_weather.skins.base import BLACK, DARK_GRAY, WHITE, format_clock
+from paperwhite_weather.skins.base import BLACK, DARK_GRAY, LIGHT_GRAY, WHITE, format_clock
 
 #: Design measurements at scale 1 (a Paperwhite 3 canvas), in pixels.
 _ARC_WIDTH = 6
+_TWILIGHT_WIDTH = 14
 _HORIZON_WIDTH = 3
-_TICK_HEIGHT = 22
 _SUN_RADIUS = 20
-_LABEL_SIZE = 34
-_SMALL_LABEL_SIZE = 26
-_SEGMENTS = 48
-#: Angle given to each civil-twilight tail, so it stays visible: civil twilight is only a
-#: few percent of the dawn-to-dusk span, and at scale it would vanish.
-_TWILIGHT_ANGLE = 0.45
+_MOON_SIZE = 60
+_LABEL_SIZE = 32
+_SMALL_LABEL_SIZE = 24
+_SEGMENTS = 64
+#: Angle given to each civil-twilight band below the horizon, so it stays visible: civil
+#: twilight is only a few percent of the day and at scale it would vanish.
+_TWILIGHT_ANGLE = 0.85
+#: The night half of the ellipse is flattened to this fraction of the day half.
+_NIGHT_DEPTH = 0.35
 
 
 def draw_sun_arc(
@@ -66,20 +71,18 @@ def draw_sun_arc(
     def px(design: float) -> int:
         return max(1, round(design * scale))
 
-    label_font = load_font("bold", px(_LABEL_SIZE))
-    small_font = load_font("regular", px(_SMALL_LABEL_SIZE))
-    label_h = px(_LABEL_SIZE) + px(_SMALL_LABEL_SIZE) + px(18)
+    label_h = px(_LABEL_SIZE) + px(8)
     sun_r = min(px(_SUN_RADIUS), height // 8)
-    below = max(px(_TICK_HEIGHT), 2 * sun_r, round(0.22 * height))  # room for the tails
-    horizon_y = bottom - label_h - below
+    night_depth = min(px(22), round(height * 0.12))
+    horizon_y = bottom - label_h - night_depth - px(10)
     center_x = (left + right) / 2
-    radius_x = width / 2 - sun_r - px(4)
-    radius_y = max(sun_r * 2, horizon_y - top - sun_r - px(10))
+    radius_x = width / 2 - sun_r - px(6)
+    radius_y = max(sun_r * 2, min(horizon_y - top - sun_r - px(6), radius_x * 0.6))
+    radius_night = min(night_depth, radius_y * _NIGHT_DEPTH)
 
-    # Time to angle: dawn at pi + phi, sunrise at pi, sunset at 0, dusk at -phi, so the
-    # twilight tails continue the ellipse below the horizon. Time is linear within each
-    # of the three segments. Angles are conventional (counterclockwise from three
-    # o'clock); the canvas y axis points down.
+    # Time to angle: sunrise at pi, sunset at 0, the twilight bands just below the
+    # horizon at each end, the night in between below. Angles are conventional
+    # (counterclockwise from three o'clock); the canvas y axis points down.
     phi = _TWILIGHT_ANGLE
 
     def fraction(moment: datetime, start: datetime, end: datetime) -> float:
@@ -94,33 +97,26 @@ def draw_sun_arc(
         return -phi * fraction(moment, sun.sunset, sun.civil_dusk)
 
     def point(theta: float) -> tuple[float, float]:
-        # The tails below the horizon are flattened so they stay clear of the labels.
         sine = math.sin(theta)
-        depth = radius_y if sine >= 0 else radius_y * 0.5
+        depth = radius_y if sine >= 0 else radius_night
         return (center_x + radius_x * math.cos(theta), horizon_y - depth * sine)
 
-    def arc(start: float, end: float, fill: int) -> None:
+    def arc(start: float, end: float, fill: int, stroke: int, dotted: bool = False) -> None:
         points = [point(start + (end - start) * k / _SEGMENTS) for k in range(_SEGMENTS + 1)]
-        draw.line(points, fill=fill, width=px(_ARC_WIDTH), joint="curve")
+        if dotted:
+            r = stroke / 2
+            for x, y in points[::4]:
+                draw.ellipse((x - r, y - r, x + r, y + r), fill=fill)
+        else:
+            draw.line(points, fill=fill, width=stroke, joint="curve")
 
-    dawn, sunrise, sunset, dusk = (
-        angle(sun.civil_dawn),
-        angle(sun.sunrise),
-        angle(sun.sunset),
-        angle(sun.civil_dusk),
-    )
-    arc(dawn, sunrise, DARK_GRAY)
-    arc(sunset, dusk, DARK_GRAY)
-    arc(sunrise, sunset, BLACK)
-
-    # Horizon with sunrise and sunset ticks.
+    arc(0, -math.pi, LIGHT_GRAY, px(5), dotted=True)  # the night, faint
+    arc(math.pi, math.pi + phi, DARK_GRAY, px(_TWILIGHT_WIDTH))  # dawn
+    arc(0, -phi, DARK_GRAY, px(_TWILIGHT_WIDTH))  # dusk
+    arc(math.pi, 0, BLACK, px(_ARC_WIDTH))  # the day
     draw.line([(left, horizon_y), (right - 1, horizon_y)], fill=BLACK, width=px(_HORIZON_WIDTH))
-    tick = px(_TICK_HEIGHT)
-    for theta in (sunrise, sunset):
-        x, _ = point(theta)
-        draw.line([(x, horizon_y - tick // 2), (x, horizon_y + tick)], fill=BLACK, width=px(4))
 
-    # The sun: filled on the arc by day, hollow under the horizon by night.
+    # The sun: a filled disc on the arc by day; a crescent on the night half otherwise.
     if sun.civil_dawn <= now <= sun.civil_dusk:
         x, y = point(angle(now))
         ring = sun_r + px(5)
@@ -128,41 +124,42 @@ def draw_sun_arc(
         draw.ellipse((x - sun_r, y - sun_r, x + sun_r, y + sun_r), fill=BLACK)
     else:
         next_dawn = sun.civil_dawn + timedelta(days=1)
-        if now < sun.civil_dawn:
-            now = now + timedelta(days=1)
-        night = fraction(now, sun.civil_dusk, next_dawn)
-        x = center_x + radius_x * math.cos(-phi - night * (math.pi - 2 * phi))
-        y = horizon_y + sun_r * 0.5
-        draw.ellipse(
-            (x - sun_r, y - sun_r, x + sun_r, y + sun_r), outline=BLACK, width=px(4), fill=WHITE
-        )
+        moment = now + timedelta(days=1) if now < sun.civil_dawn else now
+        night = fraction(moment, sun.civil_dusk, next_dawn)
+        x, _ = point(-phi - night * (math.pi - 2 * phi))
+        moon = min(px(_MOON_SIZE), 2 * (night_depth + px(10)))
+        glyph = Glyph(draw, x, horizon_y + moon * 0.45, moon)
+        glyph.dot(0.0, 0.0, 0.8, WHITE)
+        glyph.moon(0.0, 0.0, 0.55)
 
-    # Labels: sunrise and sunset under their ticks, dawn and dusk small at the ends.
-    label_y = horizon_y + below + px(4)
-    sunrise_x, _ = point(sunrise)
-    sunset_x, _ = point(sunset)
-
+    # Labels: sunrise under the left end, sunset under the right; both shrink together
+    # until they fit side by side. Dawn and dusk go between them when there is room.
     def clock(moment: datetime) -> str:
         return format_clock(moment.astimezone(tz), time_format)
 
     sunrise_text, sunset_text = clock(sun.sunrise), clock(sun.sunset)
-    room = sunset_x - sunrise_x - px(16)
     label_size = px(_LABEL_SIZE)
+    label_font = load_font("bold", label_size)
     while label_size > px(16):
         label_font = load_font("bold", label_size)
         needed = draw.textlength(sunrise_text, font=label_font) + draw.textlength(
             sunset_text, font=label_font
         )
-        if needed <= room:
+        if needed + px(16) <= width:
             break
         label_size -= 1
-    draw.text((sunrise_x, label_y), sunrise_text, font=label_font, fill=BLACK, anchor="la")
-    draw.text((sunset_x, label_y), sunset_text, font=label_font, fill=BLACK, anchor="ra")
-    dawn_text, dusk_text = f"Dawn {clock(sun.civil_dawn)}", f"Dusk {clock(sun.civil_dusk)}"
-    small_needed = draw.textlength(dawn_text, font=small_font) + draw.textlength(
-        dusk_text, font=small_font
+    label_y = bottom - label_h + px(4)
+    draw.text((left, label_y), sunrise_text, font=label_font, fill=BLACK, anchor="la")
+    draw.text((right, label_y), sunset_text, font=label_font, fill=BLACK, anchor="ra")
+    small_font = load_font("regular", px(_SMALL_LABEL_SIZE))
+    twilight = f"Dawn {clock(sun.civil_dawn)}  ·  Dusk {clock(sun.civil_dusk)}"
+    room = (
+        width
+        - draw.textlength(sunrise_text, font=label_font)
+        - draw.textlength(sunset_text, font=label_font)
+        - px(48)
     )
-    if small_needed + px(24) <= width:
-        small_y = label_y + label_size + px(6)
-        draw.text((left, small_y), dawn_text, font=small_font, fill=DARK_GRAY, anchor="la")
-        draw.text((right, small_y), dusk_text, font=small_font, fill=DARK_GRAY, anchor="ra")
+    if draw.textlength(twilight, font=small_font) <= room:
+        draw.text(
+            (center_x, label_y + px(6)), twilight, font=small_font, fill=DARK_GRAY, anchor="ma"
+        )

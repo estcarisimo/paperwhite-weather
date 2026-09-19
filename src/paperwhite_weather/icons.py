@@ -239,3 +239,85 @@ _NIGHT_DRAWERS = {
     Condition.CLEAR: _clear_night,
     Condition.PARTLY_CLOUDY: _partly_cloudy_night,
 }
+
+
+def draw_drop(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    level: float | None = None,
+    ink: int = BLACK,
+) -> None:
+    """Draw a water-drop outline in ``box``, filled from the bottom up to ``level``.
+
+    Parameters
+    ----------
+    draw
+        Drawing context of an ``"L"`` image.
+    box
+        Target area (left, top, right, bottom); the drop is centered on the shorter side.
+    level
+        Fraction in ``[0, 1]`` of the drop to fill (a probability or humidity); ``None`` or
+        ``0`` leaves it hollow.
+    ink
+        Gray level of the outline and the fill.
+    """
+    left, top, right, bottom = box
+    size = min(right - left, bottom - top)
+    if size < 8:
+        return
+    cx = left + (right - left) / 2
+    cy = top + (bottom - top) / 2
+    stroke = max(2, round(size * 0.09))
+    radius = size * 0.34
+    center_y = cy + size * 0.14
+    tip_y = cy - size * 0.5
+    _drop_shape(draw, cx, center_y, radius, tip_y, ink)
+    _drop_shape(draw, cx, center_y, radius - stroke, tip_y + stroke * 1.6, WHITE)
+    if level is None or level <= 0:
+        return
+    level = min(level, 1.0)
+    inner_r = radius - stroke
+    inner_tip = tip_y + stroke * 1.6
+    fill_y = (center_y + inner_r) - level * (center_y + inner_r - inner_tip)
+    circle = (cx - inner_r, center_y - inner_r, cx + inner_r, center_y + inner_r)
+    if fill_y >= center_y:
+        # A circular segment: the arc below the level line, closed by its chord.
+        start = math.asin(min(1.0, (fill_y - center_y) / inner_r))
+        steps = 24
+        points = [
+            (cx + inner_r * math.cos(a), center_y + inner_r * math.sin(a))
+            for a in (start + (math.pi - 2 * start) * k / steps for k in range(steps + 1))
+        ]
+        if len(points) >= 3:
+            draw.polygon(points, fill=ink)
+        return
+    draw.ellipse(circle, fill=ink)
+    # The part of the tip's triangle below the level line, as a trapezoid.
+    p1, p2 = _drop_tangents(cx, center_y, inner_r, inner_tip)
+    t = (fill_y - inner_tip) / max(p1[1] - inner_tip, 1e-6)
+    left_x = cx + (p1[0] - cx) * t
+    right_x = cx + (p2[0] - cx) * t
+    draw.polygon([(left_x, fill_y), (right_x, fill_y), p2, p1], fill=ink)
+
+
+def _drop_tangents(
+    cx: float, cy: float, radius: float, tip_y: float
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Where the two lines from the tip touch the circle (left, right)."""
+    distance = cy - tip_y
+    angle = math.asin(min(1.0, radius / distance))
+    reach = distance * math.cos(angle)
+    return (
+        (cx - math.sin(angle) * reach, tip_y + math.cos(angle) * reach),
+        (cx + math.sin(angle) * reach, tip_y + math.cos(angle) * reach),
+    )
+
+
+def _drop_shape(
+    draw: ImageDraw.ImageDraw, cx: float, cy: float, radius: float, tip_y: float, fill: int
+) -> None:
+    if radius <= 0 or tip_y >= cy - radius:
+        return
+    p1, p2 = _drop_tangents(cx, cy, radius, tip_y)
+    draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=fill)
+    draw.polygon([(cx, tip_y), p1, p2], fill=fill)

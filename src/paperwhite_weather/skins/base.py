@@ -15,6 +15,7 @@ from paperwhite_weather.models import Condition, WeatherSnapshot
 BLACK = 0
 DARK_GRAY = 85
 LIGHT_GRAY = 170
+PALE_GRAY = 221
 WHITE = 255
 
 CONDITION_LABELS: dict[Condition, str] = {

@@ -37,7 +37,8 @@ src/paperwhite_weather/
                     (Oswald Medium, condensed numerals), "serif"/"serif-bold" (DejaVu Serif);
                     all bundled in assets/fonts/
   icons.py          draw_icon(draw, condition, box, night): monochrome vector icons, one per
-                    Condition, moon variants for clear and partly cloudy at night
+                    Condition, moon variants for clear and partly cloudy at night;
+                    draw_drop(draw, box, level): a drop filled to a fraction; Glyph helper
   sun.py            compute_sun_times(location, day) -> SunTimes via astral (civil twilight)
   providers/        base.py (WeatherProvider protocol), mock.py (fixture data),
                     open_meteo.py (live: build_query, parse_forecast, WMO_CONDITIONS,

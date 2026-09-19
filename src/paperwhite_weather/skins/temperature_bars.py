@@ -1,9 +1,10 @@
 """Temperature ranges as bars on one shared scale, so the days compare at a glance.
 
-One row per day: a label, an optional condition icon, a bar from the day's low to its
-high, the two values at the bar's ends, and an optional note (precipitation probability)
-in gray at the right. All bars share one axis. A row with a ``current`` temperature
-(today) gets a disc on its bar where the temperature is now.
+One row per day: a label, an optional condition icon, the day's low in a column, a pale
+track for the shared axis with a black bar from the day's low to its high, the day's high
+in a column, and an optional note (precipitation probability) as a drop filled to the
+probability with the number in gray. All bars share one axis. A row with a ``current``
+temperature (today) gets a disc on its bar where the temperature is now.
 """
 
 from __future__ import annotations
@@ -13,9 +14,9 @@ from dataclasses import dataclass
 from PIL import ImageDraw
 
 from paperwhite_weather.fonts import load_font
-from paperwhite_weather.icons import draw_icon
+from paperwhite_weather.icons import draw_drop, draw_icon
 from paperwhite_weather.models import Condition, DailyForecast, WeatherSnapshot
-from paperwhite_weather.skins.base import BLACK, DARK_GRAY, WHITE, format_temperature
+from paperwhite_weather.skins.base import BLACK, DARK_GRAY, PALE_GRAY, WHITE, format_temperature
 
 #: Design measurements at scale 1 (a Paperwhite 3 canvas), in pixels.
 _LABEL_SIZE = 40
@@ -23,6 +24,7 @@ _VALUE_SIZE = 38
 _NOTE_SIZE = 30
 _BAR_HEIGHT = 26
 _ICON_SIZE = 90
+_DROP_SIZE = 34
 _GAP = 14
 #: Shortest axis worth drawing; below it the notes, then the icons, are dropped.
 _MIN_AXIS = 200
@@ -41,6 +43,7 @@ class TemperatureRow:
     condition: Condition | None = None
     current: float | None = None
     note: str | None = None
+    probability: float | None = None
 
 
 def rows_for_days(
@@ -73,6 +76,7 @@ def rows_for_days(
                 condition=day.condition,
                 current=snapshot.current.temperature if is_today else None,
                 note=note,
+                probability=day.precipitation_probability,
             )
         )
     return rows
@@ -131,10 +135,12 @@ def draw_temperature_bars(
             for v in (r.low, r.high)
         )
         note_w = 0.0
+        drop = 0
         if has_notes and with_notes:
             note_w = max(draw.textlength(r.note, font=note_font) for r in rows if r.note)
+            drop = min(px(_DROP_SIZE * growth), round(row_h * 0.4))
         bar_left = left + label_w + gap + (icon + gap if icon else 0) + value_w + gap
-        bar_right = right - value_w - gap - (note_w + gap if note_w else 0)
+        bar_right = right - value_w - gap - (drop + gap // 2 + note_w + gap if note_w else 0)
         if bar_right - bar_left >= px(_MIN_AXIS):
             break
     if bar_right - bar_left < 4 * bar_h:
@@ -166,14 +172,26 @@ def draw_temperature_bars(
         if x_hi - x_lo < bar_h:  # a flat day still shows as a dot-sized bar
             mid = (x_lo + x_hi) / 2
             x_lo, x_hi = mid - bar_h / 2, mid + bar_h / 2
+        # Values in aligned columns either side of the track, not at the bar's ends.
         draw.text(
-            (x_lo - gap, cy), format_temperature(row.low), font=value_font, fill=BLACK, anchor="rm"
+            (bar_left - gap, cy),
+            format_temperature(row.low),
+            font=value_font,
+            fill=DARK_GRAY,
+            anchor="rm",
+        )
+        draw.rounded_rectangle(
+            (bar_left, cy - bar_h / 2, bar_right, cy + bar_h / 2), radius=bar_h / 2, fill=PALE_GRAY
         )
         draw.rounded_rectangle(
             (x_lo, cy - bar_h / 2, x_hi, cy + bar_h / 2), radius=bar_h / 2, fill=BLACK
         )
         draw.text(
-            (x_hi + gap, cy), format_temperature(row.high), font=value_font, fill=BLACK, anchor="lm"
+            (bar_right + gap, cy),
+            format_temperature(row.high),
+            font=value_font,
+            fill=BLACK,
+            anchor="lm",
         )
         if row.current is not None:
             # The marker, ring included, stays within the bar's extent so it never
@@ -188,4 +206,12 @@ def draw_temperature_bars(
             draw.ellipse((cx - ring, cy - ring, cx + ring, cy + ring), fill=WHITE)
             draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=BLACK)
         if row.note and note_w:
+            drop_left = round(right - note_w - gap // 2 - drop)
+            level = None if row.probability is None else row.probability / 100
+            draw_drop(
+                draw,
+                (drop_left, round(cy - drop / 2), drop_left + drop, round(cy + drop / 2)),
+                level,
+                DARK_GRAY,
+            )
             draw.text((right, cy), row.note, font=note_font, fill=DARK_GRAY, anchor="rm")
