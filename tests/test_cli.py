@@ -21,7 +21,7 @@ def test_version() -> None:
 
 def test_lists() -> None:
     assert runner.invoke(app, ["skins"]).output.split() == ["minimal"]
-    assert runner.invoke(app, ["providers"]).output.split() == ["mock"]
+    assert runner.invoke(app, ["providers"]).output.split() == ["mock", "open-meteo"]
 
 
 def test_render_writes_native_size_png(tmp_path: Path) -> None:
@@ -62,7 +62,7 @@ def test_render_unknown_provider_fails(tmp_path: Path) -> None:
         app, ["render", "-c", str(EXAMPLE_CONFIG), "-o", str(tmp_path / "x.png"), "-p", "nope"]
     )
     assert result.exit_code != 0
-    assert "available: mock" in str(result.exception)
+    assert "available: mock, open-meteo" in str(result.exception)
 
 
 def test_render_orientation_override(tmp_path: Path) -> None:

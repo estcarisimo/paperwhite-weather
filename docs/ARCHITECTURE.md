@@ -188,5 +188,5 @@ long Wi-Fi takes to reconnect, are the main unknowns; `docs/DEVICE.md` tracks th
 | Where the service runs | Raspberry Pi on the LAN; static-hosting variant documented | Keeps location private, no cloud account needed |
 | Portrait vs. landscape | Portrait default, landscape supported by configuration | Matches the device's native framebuffer; either works on the wall |
 | Default skin | `minimal` | Smallest surface to get right first |
-| Weather provider | Open-Meteo | No API key for non-commercial use, includes daily sunrise/sunset; civil twilight computed locally |
+| Weather provider | Open-Meteo (done) | No API key for non-commercial use; sun times and civil twilight computed locally with `astral` |
 | Project name | Paperwhite Weather | Already used for the repository and Notion page |

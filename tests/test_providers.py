@@ -14,12 +14,12 @@ LOCATION = Location(latitude=41.8781, longitude=-87.6298, timezone="America/Chic
 
 
 def test_registry_lists_mock() -> None:
-    assert available_providers() == ["mock"]
+    assert "mock" in available_providers()
     assert isinstance(get_provider("mock"), MockProvider)
 
 
 def test_unknown_provider_lists_available() -> None:
-    with pytest.raises(ValueError, match="available: mock"):
+    with pytest.raises(ValueError, match="available: mock, open-meteo"):
         get_provider("nope")
 
 

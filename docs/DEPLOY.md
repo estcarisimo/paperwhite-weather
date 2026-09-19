@@ -72,8 +72,8 @@ router resolves `<hostname>.lan` is router-specific; `/health` reports the serve
 Verified from the Kindle on 2026-09-19: `wget` of `/health` and `/dashboard.png` by that
 name worked on the device (`docs/DEVICE.md`).
 
-The unit runs the mock provider until a live provider exists; set
-`PAPERWHITE_PROVIDER` in `.env` when it does.
+The unit defaults to the mock provider; put `PAPERWHITE_PROVIDER=open-meteo` in `.env`
+for live weather (the maintainer's Pi runs it since the merge of PR #7, 2026-09-19).
 
 ## Optional: mDNS advertisement
 

@@ -12,6 +12,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   validation, and `config.example.yaml`.
 - Provider-independent weather data model (`WeatherSnapshot`) with UTC-aware timestamps.
 - `mock` provider with deterministic fixture data for developing skins offline.
+- `open-meteo` provider: current conditions, five-day forecast, WMO weather-code mapping,
+  configured units; raises `OpenMeteoError` on any transport, HTTP, or shape problem.
+  Tested on a recorded response and a local stub server, never against the live API.
+- Civil dawn/dusk and sunrise/sunset computed locally with `astral`, pinned to a US Naval
+  Observatory table.
 - `minimal` skin: large clock and temperature, today's range, sun events, and a
   four-day forecast. Text only; icons are planned. Portrait is a single column;
   landscape is a two-column layout that uses the full width.

@@ -1,0 +1,89 @@
+{
+ "latitude": 41.879498,
+ "longitude": -87.64974,
+ "generationtime_ms": 0.5908012390136719,
+ "utc_offset_seconds": -18000,
+ "timezone": "America/Chicago",
+ "timezone_abbreviation": "GMT-5",
+ "elevation": 241.0,
+ "current_units": {
+  "time": "iso8601",
+  "interval": "seconds",
+  "temperature_2m": "\u00b0C",
+  "apparent_temperature": "\u00b0C",
+  "relative_humidity_2m": "%",
+  "wind_speed_10m": "km/h",
+  "weather_code": "wmo code",
+  "precipitation_probability": "%"
+ },
+ "current": {
+  "time": "2026-09-18T19:45",
+  "interval": 900,
+  "temperature_2m": 18.0,
+  "apparent_temperature": 17.9,
+  "relative_humidity_2m": 79,
+  "wind_speed_10m": 10.8,
+  "weather_code": 3,
+  "precipitation_probability": 3
+ },
+ "daily_units": {
+  "time": "iso8601",
+  "weather_code": "wmo code",
+  "temperature_2m_max": "\u00b0C",
+  "temperature_2m_min": "\u00b0C",
+  "precipitation_probability_max": "%",
+  "sunrise": "iso8601",
+  "sunset": "iso8601"
+ },
+ "daily": {
+  "time": [
+   "2026-09-18",
+   "2026-09-19",
+   "2026-09-20",
+   "2026-09-21",
+   "2026-09-22"
+  ],
+  "weather_code": [
+   3,
+   65,
+   63,
+   55,
+   3
+  ],
+  "temperature_2m_max": [
+   20.0,
+   21.3,
+   20.2,
+   17.2,
+   17.8
+  ],
+  "temperature_2m_min": [
+   16.9,
+   16.8,
+   17.6,
+   15.2,
+   14.5
+  ],
+  "precipitation_probability_max": [
+   23,
+   58,
+   87,
+   39,
+   14
+  ],
+  "sunrise": [
+   "2026-09-18T06:33",
+   "2026-09-19T06:35",
+   "2026-09-20T06:36",
+   "2026-09-21T06:37",
+   "2026-09-22T06:38"
+  ],
+  "sunset": [
+   "2026-09-18T18:54",
+   "2026-09-19T18:52",
+   "2026-09-20T18:51",
+   "2026-09-21T18:49",
+   "2026-09-22T18:47"
+  ]
+ }
+}
