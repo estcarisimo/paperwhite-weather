@@ -70,6 +70,20 @@ class DailyForecast(BaseModel):
         return self
 
 
+class HourlyForecast(BaseModel):
+    """One hour of forecast; ``time`` is the start of the hour, timezone-aware."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    time: datetime
+    temperature: float
+    condition: Condition
+    precipitation_probability: float | None = Field(default=None, ge=0.0, le=100.0)
+    wind_speed: float | None = Field(default=None, ge=0.0)
+
+    _aware = field_validator("time")(require_aware)
+
+
 class SunTimes(BaseModel):
     """Civil twilight and sun events for one day. All values timezone-aware."""
 
@@ -101,6 +115,9 @@ class WeatherSnapshot(BaseModel):
         Short provider name, for example ``"open-meteo"`` or ``"mock"``.
     daily
         Forecast starting with today; at least one entry.
+    hourly
+        Hour-by-hour forecast in ascending order, typically from local midnight of today;
+        empty when the provider has none.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -111,6 +128,7 @@ class WeatherSnapshot(BaseModel):
     units: Units
     current: CurrentConditions
     daily: list[DailyForecast] = Field(min_length=1)
+    hourly: list[HourlyForecast] = Field(default_factory=list)
     sun: SunTimes
 
     @field_validator("fetched_at")
@@ -126,6 +144,13 @@ class WeatherSnapshot(BaseModel):
         dates = [day.date for day in self.daily]
         if dates != sorted(set(dates)):
             raise ValueError("daily forecasts must be in ascending order without duplicates")
+        return self
+
+    @model_validator(mode="after")
+    def _hourly_sorted(self) -> WeatherSnapshot:
+        times = [hour.time for hour in self.hourly]
+        if times != sorted(set(times)):
+            raise ValueError("hourly forecasts must be in ascending order without duplicates")
         return self
 
     @property
