@@ -96,8 +96,17 @@ class Canvas:
         self.draw.line([(x, y), (x + width, y)], fill=fill, width=self.px(thickness))
         return round(y + self.px(thickness))
 
-    def icon(self, condition: Condition, box: tuple[float, float, float, float]) -> None:
-        draw_icon(self.draw, condition, tuple(round(v) for v in box))  # type: ignore[arg-type]
+    @property
+    def night(self) -> bool:
+        """Whether ``now`` is between sunset and the next sunrise (icons show a moon)."""
+        return not (self.snapshot.sun.sunrise <= self.now <= self.snapshot.sun.sunset)
+
+    def icon(
+        self, condition: Condition, box: tuple[float, float, float, float], night: bool = False
+    ) -> None:
+        """Draw the condition icon in ``box``; ``night`` selects the moon variants."""
+        left, top, right, bottom = (round(v) for v in box)
+        draw_icon(self.draw, condition, (left, top, right, bottom), night=night)
 
     def sun_arc(self, box: tuple[float, float, float, float]) -> int:
         """Draw the day's sun arc (dawn to dusk, sun marked) in ``box``; returns its bottom."""

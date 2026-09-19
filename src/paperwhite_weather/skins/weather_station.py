@@ -67,7 +67,7 @@ class WeatherStationSkin:
 
     def _current(self, c: Canvas, x: int, y: int, width: int) -> None:
         icon = c.px(200)
-        c.icon(c.snapshot.current.condition, (x, y, x + icon, y + icon))
+        c.icon(c.snapshot.current.condition, (x, y, x + icon, y + icon), night=c.night)
         tx = x + icon + c.px(30)
         temp = c.temperature(c.snapshot.current.temperature)
         c.text(

@@ -112,7 +112,7 @@ src/paperwhite_weather/
 ├── config.py          # Location, Units, Display, Settings; load_settings(path)
 ├── models.py          # WeatherSnapshot and friends: the provider-independent data model
 ├── units.py           # temperature and speed conversions
-├── fonts.py           # bundled DejaVu Sans and Serif (Bitstream Vera license)
+├── fonts.py           # bundled Inter, Oswald (SIL OFL) and DejaVu Serif (Bitstream Vera)
 ├── icons.py           # monochrome condition icons drawn with Pillow primitives
 ├── sun.py             # civil dawn/dusk, sunrise/sunset via astral
 ├── providers/         # WeatherProvider protocol, mock and Open-Meteo providers, registry
@@ -188,7 +188,8 @@ Contributions are welcome. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first, then
 
 ## 📄 License
 
-MIT; see [`LICENSE`](LICENSE). The bundled DejaVu Sans and Serif fonts are under the
+MIT; see [`LICENSE`](LICENSE). The bundled Inter and Oswald fonts are under the SIL Open
+Font License 1.1 (`LICENSE-Inter.txt`, `LICENSE-Oswald.txt` next to them); DejaVu Serif is under the
 Bitstream Vera license; see
 [`src/paperwhite_weather/assets/fonts/LICENSE-DejaVu.txt`](src/paperwhite_weather/assets/fonts/LICENSE-DejaVu.txt).
 
