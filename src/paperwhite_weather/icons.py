@@ -2,8 +2,9 @@
 
 Every icon is drawn into a square box of the requested size on an existing ``"L"`` canvas,
 so it scales with the layout and needs no bitmap assets or license. Shapes are simple on
-purpose: bold strokes and filled forms survive 16 gray levels and 300 ppi e-ink better
-than fine detail.
+purpose: filled forms and round-capped strokes survive 16 gray levels and 300 ppi e-ink
+better than fine detail. ``CLEAR`` and ``PARTLY_CLOUDY`` have night variants (a moon in
+place of the sun).
 """
 
 from __future__ import annotations
@@ -21,7 +22,10 @@ WHITE = 255
 
 
 def draw_icon(
-    draw: ImageDraw.ImageDraw, condition: Condition, box: tuple[int, int, int, int]
+    draw: ImageDraw.ImageDraw,
+    condition: Condition,
+    box: tuple[int, int, int, int],
+    night: bool = False,
 ) -> None:
     """Draw the icon for ``condition`` inside ``box`` (left, top, right, bottom).
 
@@ -33,6 +37,8 @@ def draw_icon(
         Which icon.
     box
         Square-ish target area; the icon is centered and scaled to the shorter side.
+    night
+        Use the night variant where one exists (clear and partly cloudy show a moon).
     """
     left, top, right, bottom = box
     size = min(right - left, bottom - top)
@@ -40,136 +46,182 @@ def draw_icon(
         return
     cx = left + (right - left) / 2
     cy = top + (bottom - top) / 2
-    icon = _Icon(draw, cx, cy, size)
-    _DRAWERS[condition](icon)
+    glyph = Glyph(draw, cx, cy, size)
+    drawer = _NIGHT_DRAWERS.get(condition) if night else None
+    (drawer or _DRAWERS[condition])(glyph)
 
 
-class _Icon:
-    """Unit-square helper: coordinates in [-1, 1] mapped onto the box."""
+class Glyph:
+    """Unit-square helper: coordinates in [-1, 1] mapped onto a box, round-capped strokes.
+
+    Parameters
+    ----------
+    draw
+        Drawing context of an ``"L"`` image.
+    cx, cy
+        Center of the box in canvas pixels.
+    size
+        Side of the box in canvas pixels; the unit square maps onto it.
+    """
 
     def __init__(self, draw: ImageDraw.ImageDraw, cx: float, cy: float, size: float) -> None:
         self.draw = draw
         self.cx = cx
         self.cy = cy
         self.half = size / 2
-        self.stroke = max(2, round(size * 0.07))
+        self.stroke = max(2, round(size * 0.075))
 
     def p(self, x: float, y: float) -> tuple[float, float]:
+        """Canvas coordinates of the unit-square point ``(x, y)``."""
         return (self.cx + x * self.half, self.cy + y * self.half)
 
-    def circle(self, x: float, y: float, r: float, fill: int | None, outline: int | None) -> None:
+    def dot(self, x: float, y: float, r: float, fill: int = BLACK) -> None:
+        """A filled disc of unit radius ``r``."""
         x0, y0 = self.p(x - r, y - r)
         x1, y1 = self.p(x + r, y + r)
-        self.draw.ellipse(
-            [x0, y0, x1, y1], fill=fill, outline=outline, width=self.stroke if outline else 0
-        )
+        self.draw.ellipse([x0, y0, x1, y1], fill=fill)
 
-    def line(self, x0: float, y0: float, x1: float, y1: float, fill: int = BLACK) -> None:
-        self.draw.line([self.p(x0, y0), self.p(x1, y1)], fill=fill, width=self.stroke)
+    def stroke_line(
+        self, x0: float, y0: float, x1: float, y1: float, fill: int = BLACK, width: int = 0
+    ) -> None:
+        """A line with round caps, ``width`` pixels wide (the default stroke when 0)."""
+        width = width or self.stroke
+        a, b = self.p(x0, y0), self.p(x1, y1)
+        self.draw.line([a, b], fill=fill, width=width)
+        r = width / 2
+        for x, y in (a, b):
+            self.draw.ellipse([x - r, y - r, x + r, y + r], fill=fill)
 
-    def sun(self, x: float = 0.0, y: float = 0.0, r: float = 0.42, rays: bool = True) -> None:
-        if rays:
-            for k in range(8):
-                a = k * math.pi / 4
-                self.line(
-                    x + math.cos(a) * (r + 0.16),
-                    y + math.sin(a) * (r + 0.16),
-                    x + math.cos(a) * (r + 0.42),
-                    y + math.sin(a) * (r + 0.42),
-                )
-        self.circle(x, y, r, fill=BLACK, outline=None)
+    def sun(
+        self, x: float = 0.0, y: float = 0.0, r: float = 0.40, skip: tuple[int, ...] = ()
+    ) -> None:
+        """A disc with eight round rays; ``skip`` drops rays by index (0 = right, clockwise)."""
+        self.dot(x, y, r)
+        for k in range(8):
+            if k in skip:
+                continue
+            a = k * math.pi / 4
+            self.stroke_line(
+                x + math.cos(a) * (r + 0.20),
+                y + math.sin(a) * (r + 0.20),
+                x + math.cos(a) * (r + 0.40),
+                y + math.sin(a) * (r + 0.40),
+            )
 
-    def cloud(self, x: float = 0.0, y: float = 0.1, scale: float = 1.0, fill: int = BLACK) -> None:
-        """A cloud made of three lobes on a flat base, filled."""
+    def moon(self, x: float = 0.0, y: float = 0.0, r: float = 0.55) -> None:
+        """A crescent: a disc with a second, white disc cut out of its upper right."""
+        self.dot(x, y, r)
+        self.dot(x + 0.42 * r, y - 0.30 * r, r * 0.82, WHITE)
+
+    def cloud(self, x: float = 0.0, y: float = 0.12, scale: float = 1.0, fill: int = BLACK) -> None:
+        """A cloud: a capsule base with two lobes, filled."""
         s = scale
-        # Base slab
-        x0, y0 = self.p(x - 0.82 * s, y - 0.05 * s)
-        x1, y1 = self.p(x + 0.82 * s, y + 0.42 * s)
-        self.draw.rounded_rectangle([x0, y0, x1, y1], radius=0.22 * s * self.half, fill=fill)
-        self.circle(x - 0.38 * s, y - 0.1 * s, 0.34 * s, fill=fill, outline=None)
-        self.circle(x + 0.12 * s, y - 0.28 * s, 0.46 * s, fill=fill, outline=None)
-        self.circle(x + 0.48 * s, y - 0.02 * s, 0.3 * s, fill=fill, outline=None)
+        x0, y0 = self.p(x - 0.86 * s, y - 0.02 * s)
+        x1, y1 = self.p(x + 0.86 * s, y + 0.44 * s)
+        self.draw.rounded_rectangle([x0, y0, x1, y1], radius=(y1 - y0) / 2, fill=fill)
+        self.dot(x - 0.34 * s, y - 0.10 * s, 0.34 * s, fill)
+        self.dot(x + 0.16 * s, y - 0.26 * s, 0.46 * s, fill)
 
-    def drops(self, count: int, y: float = 0.72, dx: float = 0.34, length: float = 0.28) -> None:
+    def rain(self, count: int = 3, y: float = 0.72, dx: float = 0.34, length: float = 0.30) -> None:
+        """Slanted round-capped strokes under a cloud."""
         start = -(count - 1) * dx / 2
         for k in range(count):
             x = start + k * dx
-            self.line(x + 0.08, y - length / 2, x - 0.08, y + length / 2)
+            self.stroke_line(x + 0.07, y - length / 2, x - 0.07, y + length / 2)
 
-    def flakes(self, count: int, y: float = 0.74, dx: float = 0.4) -> None:
+    def drizzle(self) -> None:
+        """Five small dots in two staggered rows."""
+        for x, y in ((-0.36, 0.62), (0.0, 0.70), (0.36, 0.62), (-0.18, 0.88), (0.18, 0.88)):
+            self.dot(x, y, 0.065)
+
+    def flakes(self, count: int = 3, y: float = 0.74, dx: float = 0.42) -> None:
+        """Six-armed asterisks under a cloud."""
         start = -(count - 1) * dx / 2
         thin = max(1, round(self.stroke * 0.5))
         for k in range(count):
             x = start + k * dx
             for a in (0.0, math.pi / 3, 2 * math.pi / 3):
-                self.draw.line(
-                    [
-                        self.p(x + math.cos(a) * 0.15, y + math.sin(a) * 0.15),
-                        self.p(x - math.cos(a) * 0.15, y - math.sin(a) * 0.15),
-                    ],
-                    fill=BLACK,
+                self.stroke_line(
+                    x + math.cos(a) * 0.15,
+                    y + math.sin(a) * 0.15,
+                    x - math.cos(a) * 0.15,
+                    y - math.sin(a) * 0.15,
                     width=thin,
                 )
 
-    def bolt(self, x: float = 0.0, y: float = 0.66) -> None:
-        pts = [
-            self.p(x + 0.12, y - 0.34),
-            self.p(x - 0.16, y + 0.04),
-            self.p(x + 0.04, y + 0.04),
-            self.p(x - 0.12, y + 0.4),
-            self.p(x + 0.2, y - 0.06),
+    def bolt(self, x: float = 0.0, y: float = 0.62) -> None:
+        """A lightning bolt polygon centered on ``(x, y)``."""
+        points = [
+            self.p(x + 0.14, y - 0.36),
+            self.p(x - 0.18, y + 0.04),
+            self.p(x + 0.03, y + 0.04),
+            self.p(x - 0.14, y + 0.42),
+            self.p(x + 0.22, y - 0.06),
             self.p(x, y - 0.06),
         ]
-        self.draw.polygon(pts, fill=BLACK)
+        self.draw.polygon(points, fill=BLACK)
 
     def fog_lines(self) -> None:
-        for k, y in enumerate((0.36, 0.58, 0.8)):
-            self.line(-0.7 + 0.1 * (k % 2), y, 0.7 - 0.1 * ((k + 1) % 2), y)
+        """Three horizontal strokes of decreasing length, staggered."""
+        for k, (y, length) in enumerate(((0.38, 0.72), (0.60, 0.60), (0.82, 0.44))):
+            offset = 0.08 * (1 if k % 2 else -1)
+            self.stroke_line(-length + offset, y, length + offset, y)
 
 
-def _clear(i: _Icon) -> None:
-    i.sun()
+def _clear(g: Glyph) -> None:
+    g.sun()
 
 
-def _partly_cloudy(i: _Icon) -> None:
-    i.sun(x=-0.26, y=-0.22, r=0.26)
-    # White halo so the cloud reads as in front of the sun.
-    i.cloud(x=0.12, y=0.2, scale=0.78, fill=WHITE)
-    i.cloud(x=0.12, y=0.2, scale=0.7)
+def _clear_night(g: Glyph) -> None:
+    g.moon(0.0, 0.0, 0.62)
 
 
-def _cloudy(i: _Icon) -> None:
-    i.cloud(x=0.0, y=0.05, scale=0.95)
+def _partly_cloudy(g: Glyph) -> None:
+    # Rays toward the cloud are skipped rather than clipped by the halo.
+    g.sun(-0.24, -0.22, 0.28, skip=(0, 1, 2))
+    g.cloud(0.12, 0.22, 0.84, WHITE)  # halo so the cloud reads as in front of the sun
+    g.cloud(0.12, 0.22, 0.72)
 
 
-def _fog(i: _Icon) -> None:
-    i.cloud(x=0.0, y=-0.3, scale=0.7, fill=DARK_GRAY)
-    i.fog_lines()
+def _partly_cloudy_night(g: Glyph) -> None:
+    g.moon(-0.24, -0.26, 0.40)
+    g.cloud(0.12, 0.22, 0.84, WHITE)
+    g.cloud(0.12, 0.22, 0.72)
 
 
-def _drizzle(i: _Icon) -> None:
-    i.cloud(x=0.0, y=-0.22, scale=0.8)
-    i.drops(3, y=0.66, dx=0.36, length=0.16)
+def _cloudy(g: Glyph) -> None:
+    g.cloud(0.0, 0.06, 0.96)
 
 
-def _rain(i: _Icon) -> None:
-    i.cloud(x=0.0, y=-0.22, scale=0.8)
-    i.drops(3, y=0.7, dx=0.36, length=0.34)
+def _fog(g: Glyph) -> None:
+    g.cloud(0.0, -0.30, 0.70, DARK_GRAY)
+    g.fog_lines()
 
 
-def _snow(i: _Icon) -> None:
-    i.cloud(x=0.0, y=-0.26, scale=0.8)
-    i.flakes(3, y=0.7, dx=0.42)
+def _drizzle(g: Glyph) -> None:
+    g.cloud(0.0, -0.24, 0.80)
+    g.drizzle()
 
 
-def _thunderstorm(i: _Icon) -> None:
-    i.cloud(x=0.0, y=-0.3, scale=0.78)
-    i.bolt(x=0.0, y=0.52)
+def _rain(g: Glyph) -> None:
+    g.cloud(0.0, -0.24, 0.80)
+    g.rain()
 
 
-def _unknown(i: _Icon) -> None:
-    i.circle(0.0, 0.0, 0.7, fill=None, outline=DARK_GRAY)
-    i.line(-0.3, 0.0, 0.3, 0.0, fill=DARK_GRAY)
+def _snow(g: Glyph) -> None:
+    g.cloud(0.0, -0.28, 0.80)
+    g.flakes()
+
+
+def _thunderstorm(g: Glyph) -> None:
+    g.cloud(0.0, -0.30, 0.78)
+    g.bolt(0.0, 0.54)
+
+
+def _unknown(g: Glyph) -> None:
+    g.dot(0.0, 0.0, 0.7, DARK_GRAY)
+    g.dot(0.0, 0.0, 0.7 - g.stroke / g.half, WHITE)
+    g.stroke_line(-0.3, 0.0, 0.3, 0.0, DARK_GRAY)
 
 
 _DRAWERS = {
@@ -182,4 +234,8 @@ _DRAWERS = {
     Condition.SNOW: _snow,
     Condition.THUNDERSTORM: _thunderstorm,
     Condition.UNKNOWN: _unknown,
+}
+_NIGHT_DRAWERS = {
+    Condition.CLEAR: _clear_night,
+    Condition.PARTLY_CLOUDY: _partly_cloudy_night,
 }

@@ -1,7 +1,9 @@
 """Bundled typefaces so rendering is identical on every machine and in CI.
 
-DejaVu Sans and DejaVu Serif are redistributed under the Bitstream Vera license; see
-``assets/fonts/LICENSE-DejaVu.txt``.
+Inter (text) and Oswald (display numerals) are static instances of the Google Fonts
+variable fonts, made with fontTools; both are under the SIL Open Font License 1.1
+(``assets/fonts/LICENSE-Inter.txt``, ``assets/fonts/LICENSE-Oswald.txt``). DejaVu Serif
+is redistributed under the Bitstream Vera license (``assets/fonts/LICENSE-DejaVu.txt``).
 """
 
 from __future__ import annotations
@@ -12,11 +14,13 @@ from typing import Literal
 
 from PIL import ImageFont
 
-Weight = Literal["regular", "bold", "serif", "serif-bold"]
+Weight = Literal["regular", "medium", "bold", "display", "serif", "serif-bold"]
 
 _FILES: dict[Weight, str] = {
-    "regular": "DejaVuSans.ttf",
-    "bold": "DejaVuSans-Bold.ttf",
+    "regular": "Inter-Regular.ttf",
+    "medium": "Inter-Medium.ttf",
+    "bold": "Inter-Bold.ttf",
+    "display": "Oswald-Medium.ttf",
     "serif": "DejaVuSerif.ttf",
     "serif-bold": "DejaVuSerif-Bold.ttf",
 }
@@ -29,8 +33,9 @@ def load_font(weight: Weight, size: int) -> ImageFont.FreeTypeFont:
     Parameters
     ----------
     weight
-        ``"regular"``, ``"bold"`` (DejaVu Sans), ``"serif"``, or ``"serif-bold"``
-        (DejaVu Serif).
+        ``"regular"``, ``"medium"``, ``"bold"`` (Inter), ``"display"`` (Oswald Medium, a
+        condensed face for large numerals), ``"serif"``, or ``"serif-bold"`` (DejaVu
+        Serif).
     size
         Font size in pixels; must be positive.
 

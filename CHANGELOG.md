@@ -28,6 +28,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   page), `weather-station` (metrics grid), `big-clock`, and `forecast`. Shared drawing
   helpers in `skins/common.py`; DejaVu Serif bundled alongside DejaVu Sans.
 - Monochrome weather icons drawn with Pillow primitives for every condition.
+- Typefaces: Inter for text and Oswald for display numerals (SIL OFL), replacing DejaVu
+  Sans in every skin; DejaVu Serif stays for `newspaper`.
+- Icons redrawn with round-capped strokes and a cleaner cloud; dots for drizzle; moon
+  variants for clear and partly cloudy, used for the current condition after sunset.
 - The sun's day as one graphic (`skins/sun_arc.py`): an arc over a horizon line from
   civil dawn to civil dusk, twilight in gray below the line, sunrise and sunset marked and
   labeled, a filled disc where the sun is now (hollow under the horizon at night). Used

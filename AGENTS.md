@@ -33,9 +33,11 @@ src/paperwhite_weather/
   models.py         WeatherSnapshot, CurrentConditions, DailyForecast, HourlyForecast, SunTimes,
                     Condition
   units.py          celsius_to_fahrenheit, kmh_to_mph, kmh_to_ms
-  fonts.py          load_font(weight, size): "regular"/"bold" (DejaVu Sans), "serif"/"serif-bold"
-                    (DejaVu Serif), bundled in assets/fonts/
-  icons.py          draw_icon(draw, condition, box): monochrome vector icons, one per Condition
+  fonts.py          load_font(weight, size): "regular"/"medium"/"bold" (Inter), "display"
+                    (Oswald Medium, condensed numerals), "serif"/"serif-bold" (DejaVu Serif);
+                    all bundled in assets/fonts/
+  icons.py          draw_icon(draw, condition, box, night): monochrome vector icons, one per
+                    Condition, moon variants for clear and partly cloudy at night
   sun.py            compute_sun_times(location, day) -> SunTimes via astral (civil twilight)
   providers/        base.py (WeatherProvider protocol), mock.py (fixture data),
                     open_meteo.py (live: build_query, parse_forecast, WMO_CONDITIONS,
@@ -149,8 +151,10 @@ uv build                                    # sdist + wheel via uv_build
   shows it upside down, fix the rotation direction in `render.py`, not in the skins.
 - Display width/height are configuration, not constants, so other Kindles can be
   supported later; only the defaults are Paperwhite 3.
-- DejaVu Sans is bundled under the Bitstream Vera license
-  (`src/paperwhite_weather/assets/fonts/LICENSE-DejaVu.txt`). Adding another typeface
+- Inter and Oswald are bundled as static instances of the Google Fonts variable fonts
+  (made with fontTools) under the SIL Open Font License 1.1 (`LICENSE-Inter.txt`,
+  `LICENSE-Oswald.txt`); DejaVu Serif under the Bitstream Vera license
+  (`LICENSE-DejaVu.txt`), all in `src/paperwhite_weather/assets/fonts/`. Adding another typeface
   needs a license check and the license file next to it.
 - `MockProvider` builds "today" from the location's local date, not the UTC date.
 - Open-Meteo returns local-time strings without an offset (`2026-09-18T06:33`); the

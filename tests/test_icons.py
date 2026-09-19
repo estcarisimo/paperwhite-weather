@@ -7,12 +7,13 @@ from paperwhite_weather.icons import draw_icon
 from paperwhite_weather.models import Condition
 
 
+@pytest.mark.parametrize("night", [False, True])
 @pytest.mark.parametrize("condition", list(Condition))
 @pytest.mark.parametrize("size", [12, 64, 300])
-def test_every_condition_draws_inside_its_box(condition: Condition, size: int) -> None:
+def test_every_condition_draws_inside_its_box(condition: Condition, size: int, night: bool) -> None:
     pad = 20
     image = Image.new("L", (size + 2 * pad, size + 2 * pad), 255)
-    draw_icon(ImageDraw.Draw(image), condition, (pad, pad, pad + size, pad + size))
+    draw_icon(ImageDraw.Draw(image), condition, (pad, pad, pad + size, pad + size), night=night)
     # Something was drawn...
     assert image.getextrema()[0] < 255
     # ...and nothing outside the box (allow one pixel of stroke overhang).
@@ -31,10 +32,19 @@ def test_tiny_box_is_a_no_op() -> None:
     assert image.getextrema() == (255, 255)
 
 
+def _render(condition: Condition, night: bool = False) -> bytes:
+    image = Image.new("L", (100, 100), 255)
+    draw_icon(ImageDraw.Draw(image), condition, (0, 0, 100, 100), night=night)
+    return image.tobytes()
+
+
 def test_icons_differ_between_conditions() -> None:
-    renders = {}
-    for condition in Condition:
-        image = Image.new("L", (100, 100), 255)
-        draw_icon(ImageDraw.Draw(image), condition, (0, 0, 100, 100))
-        renders[condition] = image.tobytes()
+    renders = {condition: _render(condition) for condition in Condition}
     assert len(set(renders.values())) == len(renders)
+
+
+def test_night_changes_only_the_sun_icons() -> None:
+    """Clear and partly cloudy get a moon at night; every other icon is the same day or night."""
+    for condition in Condition:
+        differs = _render(condition) != _render(condition, night=True)
+        assert differs == (condition in (Condition.CLEAR, Condition.PARTLY_CLOUDY)), condition

@@ -76,7 +76,11 @@ class NewspaperSkin:
             f"sunset {c.clock(sun.sunset)}, civil dusk {c.clock(sun.civil_dusk)}.",
             34,
         )
-        c.icon(current.condition, (c.width - m - icon, lead_top, c.width - m, lead_top + icon))
+        c.icon(
+            current.condition,
+            (c.width - m - icon, lead_top, c.width - m, lead_top + icon),
+            night=c.night,
+        )
         y = max(y, lead_top + icon)
 
         # Below the fold: the forecast as columns, sized to the space that is left.

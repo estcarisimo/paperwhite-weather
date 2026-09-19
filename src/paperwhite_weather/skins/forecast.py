@@ -39,7 +39,7 @@ class ForecastSkin:
         y += c.px(30)
         icon_size = c.px(200 if c.landscape else 230)
         temp_size = 170 if c.landscape else 200
-        c.icon(snapshot.current.condition, (m, y, m + icon_size, y + icon_size))
+        c.icon(snapshot.current.condition, (m, y, m + icon_size, y + icon_size), night=c.night)
         x = m + icon_size + c.px(40)
         temp = c.temperature(snapshot.current.temperature)
         c.text((x, y - c.px(20)), temp, "bold", temp_size, anchor="la", max_width=w * 0.45)

@@ -47,7 +47,11 @@ class BigClockSkin:
         c.rule(m, strip_top, w, LIGHT_GRAY, 2)
         icon_size = c.px(190)
         icon_top = strip_top + c.px(40)
-        c.icon(snapshot.current.condition, (m, icon_top, m + icon_size, icon_top + icon_size))
+        c.icon(
+            snapshot.current.condition,
+            (m, icon_top, m + icon_size, icon_top + icon_size),
+            night=c.night,
+        )
         x = m + icon_size + c.px(40)
         temp = c.temperature(snapshot.current.temperature)
         temp_size = c.text((x, icon_top - c.px(10)), temp, "bold", 170, anchor="la")
