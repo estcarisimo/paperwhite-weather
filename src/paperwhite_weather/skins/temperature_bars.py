@@ -14,7 +14,7 @@ from PIL import ImageDraw
 
 from paperwhite_weather.fonts import load_font
 from paperwhite_weather.icons import draw_icon
-from paperwhite_weather.models import Condition
+from paperwhite_weather.models import Condition, DailyForecast, WeatherSnapshot
 from paperwhite_weather.skins.base import BLACK, DARK_GRAY, WHITE, format_temperature
 
 #: Design measurements at scale 1 (a Paperwhite 3 canvas), in pixels.
@@ -41,6 +41,41 @@ class TemperatureRow:
     condition: Condition | None = None
     current: float | None = None
     note: str | None = None
+
+
+def rows_for_days(
+    snapshot: WeatherSnapshot, days: list[DailyForecast], long_names: bool = False
+) -> list[TemperatureRow]:
+    """Bar rows for ``days``: today is labeled "Today" and carries the current temperature.
+
+    Parameters
+    ----------
+    snapshot
+        Source of today's date and the current temperature.
+    days
+        Forecast days to show, in order.
+    long_names
+        Full weekday names (``"Saturday"``) instead of abbreviations (``"Sat"``).
+    """
+    today = snapshot.today.date
+    rows = []
+    for day in days:
+        is_today = day.date == today
+        label = "Today" if is_today else f"{day.date:%A}" if long_names else f"{day.date:%a}"
+        note = None
+        if day.precipitation_probability is not None:
+            note = f"{round(day.precipitation_probability)}%"
+        rows.append(
+            TemperatureRow(
+                label=label,
+                low=day.temperature_low,
+                high=day.temperature_high,
+                condition=day.condition,
+                current=snapshot.current.temperature if is_today else None,
+                note=note,
+            )
+        )
+    return rows
 
 
 def draw_temperature_bars(
@@ -141,11 +176,12 @@ def draw_temperature_bars(
             (x_hi + gap, cy), format_temperature(row.high), font=value_font, fill=BLACK, anchor="lm"
         )
         if row.current is not None:
-            cx = x_of(row.current)
+            # The marker, ring included, stays within the bar's extent so it never
+            # touches the values at the ends (current at, or beyond, the low or high).
             r = bar_h * 0.9
-            draw.ellipse(
-                (cx - r - px(4), cy - r - px(4), cx + r + px(4), cy + r + px(4)), fill=WHITE
-            )
+            ring = r + px(4)
+            cx = min(max(x_of(row.current), x_lo + ring), x_hi - ring)
+            draw.ellipse((cx - ring, cy - ring, cx + ring, cy + ring), fill=WHITE)
             draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=BLACK)
         if row.note and note_w:
             draw.text((right, cy), row.note, font=note_font, fill=DARK_GRAY, anchor="rm")

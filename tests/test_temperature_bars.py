@@ -91,6 +91,24 @@ def test_today_carries_a_marker_for_the_current_temperature() -> None:
 
 
 @pytest.mark.behaviour
+@pytest.mark.parametrize("current", [57, 75, 40, 90, 66])
+def test_marker_never_touches_the_values_at_the_bar_ends(current: float) -> None:
+    """With current at, beyond, or inside the range, the low/high text is untouched."""
+    size = (960, 480)
+    # A reference row spanning every tested value keeps the axis identical in both renders.
+    rest = [*ROWS[1:], TemperatureRow("Ref", 40, 90)]
+    plain = _render([replace(ROWS[0], current=None), *rest], size)
+    marked = _render([replace(ROWS[0], current=current), *rest], size)
+    assert marked.tobytes() != plain.tobytes(), "no marker drawn"
+    x_lo, x_hi = _bar_span(plain, 0, len(rest) + 1, size)
+    row = size[1] // (len(rest) + 1)
+    outside_left = (0, 20, x_lo - 1, 20 + row)
+    outside_right = (x_hi + 1, 20, plain.width, 20 + row)
+    assert marked.crop(outside_left).tobytes() == plain.crop(outside_left).tobytes()
+    assert marked.crop(outside_right).tobytes() == plain.crop(outside_right).tobytes()
+
+
+@pytest.mark.behaviour
 def test_narrow_boxes_drop_notes_then_icons_and_a_tiny_box_draws_nothing() -> None:
     """Whether notes or icons were drawn shows in whether removing them changes the frame."""
     no_notes = [replace(r, note=None) for r in ROWS]

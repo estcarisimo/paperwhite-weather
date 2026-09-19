@@ -26,7 +26,7 @@ from paperwhite_weather.skins.base import (
     format_temperature,
 )
 from paperwhite_weather.skins.sun_arc import draw_sun_arc
-from paperwhite_weather.skins.temperature_bars import TemperatureRow, draw_temperature_bars
+from paperwhite_weather.skins.temperature_bars import draw_temperature_bars, rows_for_days
 
 #: The layout is designed for the Paperwhite 3 canvas (1072x1448 portrait, 1448x1072
 #: landscape) and scaled down uniformly when the actual canvas is smaller.
@@ -164,25 +164,7 @@ class _Frame:
 
     def temperature_bars(self, x: int, y: int, width: int, long_names: bool = False) -> int:
         """Today and the next days as bars on one scale, down to the footer."""
-        days = self.snapshot.daily[: _FORECAST_DAYS + 1]
-        today = self.snapshot.today.date
-        rows = []
-        for day in days:
-            is_today = day.date == today
-            label = "Today" if is_today else f"{day.date:%A}" if long_names else f"{day.date:%a}"
-            note = None
-            if day.precipitation_probability is not None:
-                note = f"{round(day.precipitation_probability)}%"
-            rows.append(
-                TemperatureRow(
-                    label,
-                    day.temperature_low,
-                    day.temperature_high,
-                    day.condition,
-                    self.snapshot.current.temperature if is_today else None,
-                    note,
-                )
-            )
+        rows = rows_for_days(self.snapshot, self.snapshot.daily[: _FORECAST_DAYS + 1], long_names)
         bottom = self.height - self.margin - self.px(50)
         draw_temperature_bars(self.draw, (x, y, x + width, bottom), rows, self.scale)
         return bottom
