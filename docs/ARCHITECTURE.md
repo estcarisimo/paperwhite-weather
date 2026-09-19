@@ -20,7 +20,7 @@ flowchart LR
 | Component | Runs on | Responsibility |
 | --- | --- | --- |
 | Provider | server | Call one weather API, convert the response to `WeatherSnapshot`, raise on failure |
-| Data model | server | `WeatherSnapshot`: current conditions, daily forecast, sun times, UTC `fetched_at` |
+| Data model | server | `WeatherSnapshot`: current conditions, daily and hourly forecast, sun times, UTC `fetched_at` |
 | Skin | server | Draw one frame on a canvas of a given size; several skins share the same data |
 | Renderer | server | Pick the skin, handle orientation, quantize to the panel's gray levels |
 | Service (`service.py`) | server | Refresh on a schedule, cache the last good snapshot, render frames on request, serve them over HTTP |

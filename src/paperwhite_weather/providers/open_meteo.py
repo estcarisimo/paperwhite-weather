@@ -17,6 +17,7 @@ from paperwhite_weather.models import (
     Condition,
     CurrentConditions,
     DailyForecast,
+    HourlyForecast,
     WeatherSnapshot,
 )
 from paperwhite_weather.sun import compute_sun_times
@@ -40,6 +41,12 @@ _DAILY_FIELDS = (
     "temperature_2m_max",
     "temperature_2m_min",
     "precipitation_probability_max",
+)
+_HOURLY_FIELDS = (
+    "temperature_2m",
+    "weather_code",
+    "precipitation_probability",
+    "wind_speed_10m",
 )
 _WIND_UNIT = {"kmh": "kmh", "mph": "mph", "ms": "ms"}
 
@@ -95,6 +102,7 @@ def build_query(location: Location, units: Units) -> dict[str, str]:
         "timezone": location.timezone,
         "current": ",".join(_CURRENT_FIELDS),
         "daily": ",".join(_DAILY_FIELDS),
+        "hourly": ",".join(_HOURLY_FIELDS),
         "forecast_days": str(FORECAST_DAYS),
         "temperature_unit": units.temperature,
         "wind_speed_unit": _WIND_UNIT[units.wind],
@@ -102,7 +110,7 @@ def build_query(location: Location, units: Units) -> dict[str, str]:
 
 
 class OpenMeteoProvider:
-    """Fetch current conditions and a daily forecast from Open-Meteo.
+    """Fetch current conditions, a daily forecast, and an hourly forecast from Open-Meteo.
 
     Sun times are computed locally (:mod:`paperwhite_weather.sun`) rather than taken from
     the API, because the API has no civil twilight.
@@ -221,8 +229,47 @@ def parse_forecast(
             precipitation_probability=_optional_float(current.get("precipitation_probability")),
         ),
         daily=forecasts,
+        hourly=_parse_hourly(payload, location),
         sun=compute_sun_times(location, days[0]),
     )
+
+
+def _parse_hourly(payload: Mapping[str, Any], location: Location) -> list[HourlyForecast]:
+    """The ``hourly`` block as :class:`HourlyForecast` entries in the location's time zone.
+
+    Open-Meteo writes hourly times as local-time strings without an offset
+    (``2026-09-19T14:00``); they are made aware with the location's ``tzinfo``. Hours
+    without a temperature are skipped (the API pads the last day with ``null``).
+    """
+    try:
+        hourly = payload["hourly"]
+        times = [datetime.fromisoformat(value) for value in hourly["time"]]
+        temperatures = hourly["temperature_2m"]
+        codes = hourly["weather_code"]
+        probabilities = hourly["precipitation_probability"]
+        winds = hourly["wind_speed_10m"]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise OpenMeteoError(f"unexpected Open-Meteo hourly shape: {exc!r}") from exc
+    if not (len(times) == len(temperatures) == len(codes) == len(probabilities) == len(winds)):
+        raise OpenMeteoError("Open-Meteo hourly arrays are of unequal length")
+    hours = []
+    for moment, temperature, code, probability, wind in zip(
+        times, temperatures, codes, probabilities, winds, strict=True
+    ):
+        if moment.tzinfo is not None:
+            raise OpenMeteoError(f"unexpected offset in Open-Meteo hourly time {moment}")
+        if temperature is None:
+            continue
+        hours.append(
+            HourlyForecast(
+                time=moment.replace(tzinfo=location.tzinfo),
+                temperature=float(temperature),
+                condition=condition_from_wmo(code),
+                precipitation_probability=_optional_float(probability),
+                wind_speed=_optional_float(wind),
+            )
+        )
+    return hours
 
 
 def _optional_float(value: object) -> float | None:

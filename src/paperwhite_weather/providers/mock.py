@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import datetime, time, timedelta, timezone
 from typing import ClassVar
 
@@ -10,6 +11,7 @@ from paperwhite_weather.models import (
     Condition,
     CurrentConditions,
     DailyForecast,
+    HourlyForecast,
     SunTimes,
     WeatherSnapshot,
 )
@@ -28,6 +30,12 @@ _CURRENT_TEMPERATURE_C = 21.0
 _CURRENT_FEELS_LIKE_C = 20.0
 _CURRENT_WIND_KMH = 14.0
 _CURRENT_HUMIDITY = 58.0
+
+#: Shape of the mock day: the temperature wave peaks at this local hour (and bottoms out
+#: twelve hours earlier).
+_WARMEST_HOUR = 15
+#: Rain, when the day has any, is concentrated in this local-hour window.
+_RAIN_HOURS = range(13, 20)
 
 _CIVIL_DAWN = time(6, 12)
 _SUNRISE = time(6, 40)
@@ -75,6 +83,12 @@ class MockProvider:
         def at(clock: time) -> datetime:
             return datetime.combine(today, clock, tzinfo=location.tzinfo)
 
+        hourly = [
+            hour
+            for day in daily
+            for hour in _hourly_for_day(day, location, wind(_CURRENT_WIND_KMH))
+        ]
+
         return WeatherSnapshot(
             fetched_at=now.astimezone(timezone.utc),
             source=self.name,
@@ -89,6 +103,7 @@ class MockProvider:
                 precipitation_probability=daily[0].precipitation_probability,
             ),
             daily=daily,
+            hourly=hourly,
             sun=SunTimes(
                 civil_dawn=at(_CIVIL_DAWN),
                 sunrise=at(_SUNRISE),
@@ -96,6 +111,38 @@ class MockProvider:
                 civil_dusk=at(_CIVIL_DUSK),
             ),
         )
+
+
+def _hourly_for_day(day: DailyForecast, location: Location, wind: float) -> list[HourlyForecast]:
+    """Twenty-four plausible hours for ``day``.
+
+    A cosine wave between the day's low (at 3 in the morning) and high (at 15); rain in
+    the afternoon window when the day's probability is 50 % or more, with the
+    probability reduced outside that window; wind following the temperature.
+    """
+    midnight = datetime.combine(day.date, time(0), tzinfo=location.tzinfo)
+    span = day.temperature_high - day.temperature_low
+    hours = []
+    for hour in range(24):
+        phase = (hour - _WARMEST_HOUR) / 24 * 2 * math.pi
+        temperature = day.temperature_low + span * (math.cos(phase) + 1) / 2
+        raining = hour in _RAIN_HOURS and (day.precipitation_probability or 0) >= 50
+        probability = day.precipitation_probability
+        if probability is not None and hour not in _RAIN_HOURS:
+            probability = round(probability * 0.25)
+        hours.append(
+            HourlyForecast(
+                time=midnight + timedelta(hours=hour),
+                temperature=round(temperature, 1),
+                condition=day.condition if raining or day.condition in _DRY else Condition.CLOUDY,
+                precipitation_probability=probability,
+                wind_speed=round(wind * (0.6 + 0.4 * (math.cos(phase) + 1) / 2), 1),
+            )
+        )
+    return hours
+
+
+_DRY = frozenset({Condition.CLEAR, Condition.PARTLY_CLOUDY, Condition.CLOUDY, Condition.FOG})
 
 
 def _identity(value: float) -> float:
