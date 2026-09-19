@@ -28,6 +28,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   next four days as columns (weekday, icon, high and low, a rain drop from 20 % up)
   instead of the bar chart, which stays in `forecast` and `weather-station`. The skin
   now draws on the shared `Canvas` (`Canvas.day_columns` is the new block).
+- `graphic` skin, the picture end of the range: a hero of the current condition (large
+  icon, the temperature in the Oswald display face), the optional metrics as glyphs
+  (thermometer, drops, wind), the sun arc, and the week as a high/low band chart
+  (`skins/band_chart.py`: two smooth curves with the band between, values by the dots,
+  a rain drop per day, today's temperature as a hollow ring). Shared pieces on the
+  canvas: `band_chart()`, `metrics_strip()`, `number()`; glyphs `icons.draw_wind` and
+  `icons.draw_thermometer`.
 - Four more skins, each with portrait and landscape layouts: `newspaper` (serif front
   page), `weather-station` (metrics grid), `big-clock`, and `forecast`. Shared drawing
   helpers in `skins/common.py`; DejaVu Serif bundled alongside DejaVu Sans.

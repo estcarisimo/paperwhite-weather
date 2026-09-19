@@ -321,3 +321,31 @@ def _drop_shape(
     p1, p2 = _drop_tangents(cx, cy, radius, tip_y)
     draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=fill)
     draw.polygon([(cx, tip_y), p1, p2], fill=fill)
+
+
+def draw_wind(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], ink: int = BLACK) -> None:
+    """Three staggered horizontal strokes, the wind glyph for a metric."""
+    left, top, right, bottom = box
+    size = min(right - left, bottom - top)
+    if size < 8:
+        return
+    g = Glyph(draw, left + (right - left) / 2, top + (bottom - top) / 2, size)
+    for y, length, offset in ((-0.34, 0.55, -0.20), (0.0, 0.80, 0.05), (0.34, 0.50, -0.30)):
+        g.stroke_line(-length + offset, y, length + offset, y, ink)
+
+
+def draw_thermometer(
+    draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], ink: int = BLACK
+) -> None:
+    """A thermometer outline with a filled bulb, the glyph for a temperature metric."""
+    left, top, right, bottom = box
+    size = min(right - left, bottom - top)
+    if size < 8:
+        return
+    g = Glyph(draw, left + (right - left) / 2, top + (bottom - top) / 2, size)
+    wide = max(2, round(size * 0.22))
+    narrow = max(1, round(size * 0.08))
+    g.stroke_line(0.0, -0.55, 0.0, 0.25, ink, wide)
+    g.stroke_line(0.0, -0.55, 0.0, 0.25, WHITE, narrow)
+    g.dot(0.0, 0.5, 0.32, ink)
+    g.stroke_line(0.0, -0.2, 0.0, 0.3, ink, narrow)

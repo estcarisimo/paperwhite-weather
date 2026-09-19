@@ -13,8 +13,9 @@ from PIL import Image, ImageDraw
 
 from paperwhite_weather.config import Settings
 from paperwhite_weather.fonts import Weight, load_font
-from paperwhite_weather.icons import draw_drop, draw_icon
+from paperwhite_weather.icons import draw_drop, draw_icon, draw_thermometer, draw_wind
 from paperwhite_weather.models import Condition, DailyForecast, WeatherSnapshot
+from paperwhite_weather.skins.band_chart import draw_band_chart
 from paperwhite_weather.skins.base import (
     BLACK,
     CONDITION_LABELS,
@@ -143,6 +144,80 @@ class Canvas:
             self.scale,
         )
         return bottom
+
+    def number(self, right: float, top: float, text: str, size: float, max_width: float) -> int:
+        """Draw ``text`` in the display face, right-aligned, with the glyphs' top at ``top``.
+
+        Returns the glyph bottom. Display faces carry tall ascenders, so anchoring by
+        the glyph box keeps large numerals aligned with what sits beside them.
+        """
+        font = fit_font(self.draw, text, "display", self.px(size), max_width)
+        _, glyph_top, _, glyph_bottom = self.draw.textbbox((0, 0), text, font=font, anchor="ls")
+        self.draw.text((right, top - glyph_top), text, font=font, fill=BLACK, anchor="rs")
+        return round(top + glyph_bottom - glyph_top)
+
+    def band_chart(self, box: tuple[float, float, float, float], days: list[DailyForecast]) -> int:
+        """Draw ``days`` as the high/low band chart in ``box``; returns its bottom."""
+        left, top, right, bottom = (round(v) for v in box)
+        draw_band_chart(
+            self.draw,
+            (left, top, right, bottom),
+            days,
+            current=self.snapshot.current.temperature,
+            scale=self.scale,
+            long_names=False,
+        )
+        return bottom
+
+    def metrics_strip(self, box: tuple[float, float, float, float], compact: bool = False) -> int:
+        """The optional current metrics as glyph + value cells; returns the bottom.
+
+        Cells share the width; ``compact`` drops the labels and wraps two per row.
+        """
+        left, top, right, _ = box
+        cells = self.metrics()
+        if not cells:
+            return round(top)
+        per_row = 2 if compact else len(cells)
+        cell_w = (right - left) / per_row
+        size = self.px(48 if compact else 64)
+        row_h = size + self.px(18 if compact else 62)
+        glyphs = {
+            "Feels like": draw_thermometer,
+            "Wind": draw_wind,
+        }
+        levels = {
+            "Humidity": self.snapshot.current.humidity_percent,
+            "Precipitation": self.snapshot.current.precipitation_probability,
+        }
+        for k, (label, value) in enumerate(cells):
+            x = round(left + cell_w * (k % per_row))
+            y = round(top + row_h * (k // per_row))
+            glyph_box = (x, y, x + size, y + size)
+            if label in glyphs:
+                glyphs[label](self.draw, glyph_box, BLACK)
+            else:
+                level = levels.get(label)
+                draw_drop(self.draw, glyph_box, None if level is None else level / 100, BLACK)
+            self.text(
+                (x + size + self.px(16), y + size / 2),
+                value,
+                "bold",
+                42 if compact else 50,
+                anchor="lm",
+                max_width=cell_w - size - self.px(24),
+            )
+            if not compact:
+                self.text(
+                    (x + size + self.px(16), y + size + self.px(8)),
+                    label if label != "Precipitation" else "Rain",
+                    "regular",
+                    26,
+                    fill=DARK_GRAY,
+                    anchor="la",
+                )
+        rows = (len(cells) + per_row - 1) // per_row
+        return round(top + rows * row_h)
 
     def day_columns(self, box: tuple[float, float, float, float], days: list[DailyForecast]) -> int:
         """Draw ``days`` as equal columns: weekday, icon, high and low, rain when likely.

@@ -124,11 +124,14 @@ The first versions read well; the direction is **fewer words, more pictures**.
       than "H 75°  L 57°" text. Aligned bars make the week comparable at a glance
       (2026-09-19, `skins/temperature_bars.py`, in `minimal`, `weather-station`,
       `forecast`; `big-clock` keeps its one line; to be judged on the panel).
-- [ ] **Less text where a symbol carries the meaning**: precipitation probability as a
+- [x] **Less text where a symbol carries the meaning** (2026-09-20: rain drops in the bars,
+      `minimal`, and `graphic`; thermometer, drop, and wind glyphs in `graphic`;
+      `weather-station` next): precipitation probability as a
       drop icon with the number, wind as an arrow with the speed, humidity as a
       half-filled drop. The `newspaper` skin stays deliberately textual; the other four
       move toward icons.
-- [ ] **Icon refinement**: the condition icons are a first cut; review each at panel
+- [x] **Icon refinement** (2026-09-19, PR #17: round caps, cleaner cloud, night variants;
+      the review at panel scale is still to do): the condition icons are a first cut; review each at panel
       scale (photo of the device), unify stroke weights, and consider distinct glyphs
       for showers versus steady rain and for night (clear night, partly cloudy night)
       once the model knows whether it is night.

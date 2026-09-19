@@ -18,7 +18,7 @@ displays it.
 ## ✨ Features
 
 - 🖼️ **Kindle-native rendering**: 1072x1448 grayscale PNG, quantized to the panel's 16 gray levels, landscape (default) or portrait, each with its own layout
-- 🎨 **Five skins on one data model**: `minimal`, `newspaper`, `weather-station`, `big-clock`, `forecast`; each has a portrait and a landscape layout, and all draw from the same snapshot
+- 🎨 **Six skins on one data model**, from quiet to detailed: `minimal`, `big-clock`, `forecast`, `graphic`, `weather-station`, and the serif `newspaper`; each has a portrait and a landscape layout, and all draw from the same snapshot
 - 🌡️ **The week on one scale**: each day's low-to-high as a bar on a shared axis, today's bar marked at the current temperature
 - 🔌 **Pluggable providers**: Open-Meteo for live data (no API key), a deterministic `mock` provider for development
 - 🌤️ **Monochrome icons** drawn with vector primitives, so they scale to any panel and carry no license baggage
@@ -116,7 +116,7 @@ src/paperwhite_weather/
 ├── icons.py           # monochrome condition icons drawn with Pillow primitives
 ├── sun.py             # civil dawn/dusk, sunrise/sunset via astral
 ├── providers/         # WeatherProvider protocol, mock and Open-Meteo providers, registry
-├── skins/             # Skin protocol, Canvas helper, five skins, registry
+├── skins/             # Skin protocol, Canvas helper, six skins, registry
 ├── render.py          # render_dashboard(): compose, rotate, quantize to 16 grays; render_offline()
 ├── service.py         # DashboardService (cache + per-minute frames) and the HTTP server
 └── cli.py             # `paperwhite render | gallery | serve | skins | providers | version`
@@ -166,15 +166,18 @@ portrait. `paperwhite gallery` produces all of these; CI uploads them on every r
 | `weather-station` | <img src="docs/img/weather-station-landscape-view.png" width="420"> | <img src="docs/img/weather-station-portrait.png" width="200"> |
 | `big-clock` | <img src="docs/img/big-clock-landscape-view.png" width="420"> | <img src="docs/img/big-clock-portrait.png" width="200"> |
 | `forecast` | <img src="docs/img/forecast-landscape-view.png" width="420"> | <img src="docs/img/forecast-portrait.png" width="200"> |
+| `graphic` | <img src="docs/img/graphic-landscape-view.png" width="420"> | <img src="docs/img/graphic-portrait.png" width="200"> |
 
 ## 🗺️ Roadmap
 
-The five skins above are first versions. The next round makes them **more graphic and
-less textual**: the sun arc and the temperature bars are the first steps; next are
-precipitation and wind as icons with a number, and a review of every icon on the physical
-panel. The `newspaper` skin stays
-text-first on purpose. The full plan, with what is done and what is open, is in
-[`docs/ROADMAP.md`](docs/ROADMAP.md); ideas are welcome as issues.
+The skins are in their second pass (September 2026), with the direction **fewer words,
+more pictures**: Inter and Oswald typefaces, redrawn icons with night variants, the sun
+arc, temperature bars on a shared track, and the `graphic` skin's band chart are in;
+`minimal` is the quiet end of the range. Still to come: a `timeline` skin drawing the
+day hour by hour (the hourly data is already in the model), and layout passes over
+`weather-station`, `big-clock`, and `newspaper` (which stays text-first on purpose). The
+full plan, with what is done and what is open, is in [`docs/ROADMAP.md`](docs/ROADMAP.md);
+ideas are welcome as issues.
 
 ## 🤝 Contributing
 

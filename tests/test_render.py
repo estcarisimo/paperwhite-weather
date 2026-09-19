@@ -18,9 +18,16 @@ def _gray_levels(image: Image.Image) -> set[int]:
 
 
 def test_registry_lists_every_skin() -> None:
-    assert available_skins() == ["big-clock", "forecast", "minimal", "newspaper", "weather-station"]
+    assert available_skins() == [
+        "big-clock",
+        "forecast",
+        "graphic",
+        "minimal",
+        "newspaper",
+        "weather-station",
+    ]
     assert get_skin("minimal").name == "minimal"
-    with pytest.raises(ValueError, match="available: big-clock, forecast, minimal"):
+    with pytest.raises(ValueError, match="available: big-clock, forecast, graphic, minimal"):
         get_skin("nope")
 
 

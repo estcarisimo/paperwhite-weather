@@ -7,6 +7,7 @@ from collections.abc import Callable
 from paperwhite_weather.skins.base import Skin
 from paperwhite_weather.skins.big_clock import BigClockSkin
 from paperwhite_weather.skins.forecast import ForecastSkin
+from paperwhite_weather.skins.graphic import GraphicSkin
 from paperwhite_weather.skins.minimal import MinimalSkin
 from paperwhite_weather.skins.newspaper import NewspaperSkin
 from paperwhite_weather.skins.weather_station import WeatherStationSkin
@@ -17,6 +18,7 @@ _FACTORIES: dict[str, Callable[[], Skin]] = {
     WeatherStationSkin.name: WeatherStationSkin,
     BigClockSkin.name: BigClockSkin,
     ForecastSkin.name: ForecastSkin,
+    GraphicSkin.name: GraphicSkin,
 }
 
 
@@ -45,6 +47,7 @@ def get_skin(name: str) -> Skin:
 __all__ = [
     "BigClockSkin",
     "ForecastSkin",
+    "GraphicSkin",
     "MinimalSkin",
     "NewspaperSkin",
     "Skin",
