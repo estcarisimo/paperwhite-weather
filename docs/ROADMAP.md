@@ -37,13 +37,14 @@ Goal: shell access to the Kindle and a static image on its screen.
 - [x] From the device: `wget http://smokingpi.lan:8765/health` returned the service
       identity, so DNS-name discovery works from the Kindle's resolver (2026-09-19).
 - [x] Touch: `/dev/input/event1` (`cyttsp4_mt`) fires on a tap with the stock GUI running.
-- [ ] Check readability of the `minimal` skin from across a room; adjust type sizes.
+- [x] First look at the `minimal` skin on the panel (2026-09-19): readable; the stock GUI
+      repainted over it on a tap, so a longer readability check waits for Sprint 3.
 - [ ] Measure: Wi-Fi reconnect time, whether RTC wake from suspend works, idle battery
-      drain over a night.
+      drain over a night. (Moved to Sprint 3, where the client script exercises them.)
 
-Done when: a frame rendered by this package is on the e-ink panel in landscape (done) and
-`docs/DEVICE.md` has no "assumed" entries left for the panel, the toolchain, and touch
-(done). Remaining items above roll into Sprint 3.
+Done: a frame rendered by this package is on the e-ink panel in landscape and
+`docs/DEVICE.md` has no "assumed" entries left for the panel, the toolchain, and touch.
+Open items above are listed again under Sprint 3.
 
 ## Sprint 2 — Live weather service (M2)
 
@@ -73,6 +74,13 @@ Goal: the dashboard runs unattended on the wall.
       fetch the image for the current orientation, display, periodic full clear against
       ghosting, RTC wake and suspend, Wi-Fi handling, fallback to the cached image.
 - [ ] Tap to toggle orientation, persisted on the device.
+- [ ] Keep our frame on screen: stop the stock GUI or repaint over it; suppress the
+      screensaver (`preventScreenSaver`).
+- [ ] Portrait frame on the panel; confirm the landscape rotation direction as mounted.
+- [ ] Measure Wi-Fi reconnect time, RTC wake from suspend (`/sys/class/rtc/rtc0/wakealarm`),
+      and idle battery drain over a night, before the week-long run.
+- [ ] Readability of the `minimal` skin from across a room, once the frame stays up;
+      adjust type sizes.
 - [ ] KUAL extension to start/stop it; install instructions verified on the device.
 - [ ] Battery measurement over a week at 15-minute refresh; decide on the clock question.
 - [ ] Photos of the device for the README.

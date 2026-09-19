@@ -133,20 +133,13 @@ finds the device by scanning the LAN for port 22 (or use a DHCP reservation on t
 router). That is the opposite direction from the dashboard traffic and only matters for
 development.
 
-Record after shell access (done, see the verified table above): `eips -i`, `uname -a`, `cat /etc/prettyversion.txt`, `which wget
-curl eips lipc-set-prop lipc-get-prop rtcwake`, `ls /dev/input/`, and `cat
-/proc/bus/input/devices` (which node is the touch controller). Then move the panel
-geometry and the toolchain table below from "assumed" to "verified".
-
-### Touch input (design, verify in Sprint 1)
-
-Community notes (SixFoisNeuf, "Kindle hacking: a deeper dive into the internals") describe
-`/dev/input/event0..2` on older models with 16-byte events (two 4-byte timestamp words,
-2-byte type, 2-byte code, 4-byte value); the touch controller on Paperwhite-class devices
-is typically `event1`. To verify: `cat /proc/bus/input/devices`, then
-`timeout 10 dd if=/dev/input/event1 bs=16 count=1 | xxd` while tapping the screen. Also
-check whether the stock GUI (`lab126_gui` / `framework`) must be running for touches to
-register at the device node; other dashboards stop the framework and paint over it.
+Everything the runbook asked to record after shell access is in the "Verified on
+2026-09-19" table above. The touch findings there confirm the community description
+(SixFoisNeuf, "Kindle hacking: a deeper dive into the internals") of 16-byte input events
+on `/dev/input/event1`, and add that the events reach a script while the stock GUI is
+running. What the stock GUI does to our frame afterwards is a Sprint 3 question: a tap
+made it repaint its home screen over the frame on 2026-09-19, so the client will need to
+stop the framework or keep repainting.
 
 ## Kindle-side runtime (verified 2026-09-19)
 
