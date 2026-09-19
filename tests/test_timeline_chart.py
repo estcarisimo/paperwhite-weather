@@ -92,8 +92,7 @@ def test_now_marker_moves_with_the_time_and_the_night_is_shaded(sun: SunTimes) -
     # A column at 3 AM lies in the night shade; one at noon does not. Probe a row above
     # the curve area, where only the shade can put ink.
     plot_left = 20 + 40
-    step = 944 / 24 * 1.0
-    step = (944 - 40) / 24
+    step = (944 - 40 - 30) / 24
     y = 20 + 56 + 54 - 20
     at_3 = afternoon.getpixel((round(plot_left + 3 * step), y))
     at_noon = afternoon.getpixel((round(plot_left + 12 * step), y))

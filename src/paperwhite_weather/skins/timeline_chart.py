@@ -80,7 +80,7 @@ def draw_timeline(
     def px(design: float) -> int:
         return max(1, round(design * scale))
 
-    label_h = px(_LABEL_SIZE) + px(16)
+    label_h = px(_LABEL_SIZE) + px(28)
     rain_h = px(_RAIN_HEIGHT)
     wind_h = px(_WIND_HEIGHT) if wind and height > px(420) else 0
     icon = px(_ICON_SIZE)
@@ -93,7 +93,8 @@ def draw_timeline(
     day_font = load_font("bold", px(26))
     glyph_left = left + px(4)
     plot_left = left + px(40)
-    step = (right - plot_left) / (count - 1)
+    plot_right = right - px(30)  # room for the last hour label and the curve's cap
+    step = (plot_right - plot_left) / (count - 1)
 
     def x_of(index: float) -> float:
         return plot_left + step * index
@@ -145,7 +146,7 @@ def draw_timeline(
         x0, x1 = x_of(k) - step * 0.32, x_of(k) + step * 0.32
         fill = DARK_GRAY if probability >= 50 else LIGHT_GRAY
         draw.rectangle((x0, baseline - bar, x1, baseline), fill=fill)
-    draw.line([(plot_left, baseline), (right, baseline)], fill=LIGHT_GRAY, width=px(2))
+    draw.line([(plot_left, baseline), (plot_right, baseline)], fill=LIGHT_GRAY, width=px(2))
     drop = px(26)
     draw_drop(
         draw,
@@ -189,7 +190,7 @@ def draw_timeline(
         x = x_of(k)
         if local.hour % _LABEL_EVERY == 0:
             draw.text(
-                (x, bottom - label_h + px(12)),
+                (x, bottom - label_h + px(10)),
                 _hour_label(local, time_format),
                 font=label_font,
                 fill=BLACK if local.hour == 0 else DARK_GRAY,

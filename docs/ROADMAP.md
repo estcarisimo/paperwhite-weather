@@ -108,6 +108,8 @@ the refinement time goes, once the device runs unattended.
       (weather-station grid, newspaper deck). UV and moon phase: not in the model yet.
 - [ ] Refine layouts on the physical panel: type sizes from across the room, ghosting
       after partial refreshes, the amount of empty space in portrait.
+- [x] Hourly forecast in the model (PR #16) and the `timeline` skin drawing it (2026-09-20).
+- [x] `graphic` skin: hero, metric glyphs, sun arc, and the week as a band chart (PR #20).
 - [ ] UV index and moon phase in the model and the weather-station skin.
 
 ### Refinement backlog (maintainer review of the first versions, 2026-09-19)
