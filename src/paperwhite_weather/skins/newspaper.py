@@ -91,7 +91,11 @@ class NewspaperSkin:
         days = snapshot.daily[1 : _FORECAST_DAYS + 1]
         if days:
             available = c.height - m - c.px(50) - y  # leave room for the footer
-            small = max(c.px(60), min(c.px(230), available - c.px(130)))
+            # Two text lines under the icon need about 160 design px; when the space
+            # left is short (landscape), range and condition share one line instead.
+            two_lines = available >= c.px(60) + c.px(50) + c.px(160)
+            reserved = c.px(50) + (c.px(160) if two_lines else c.px(70))
+            small = max(c.px(60), min(c.px(230), available - reserved))
             column = w / len(days)
             for k, day in enumerate(days):
                 x = m + column * k
@@ -100,22 +104,32 @@ class NewspaperSkin:
                 )
                 c.icon(day.condition, (x, y + c.px(50), x + small, y + c.px(50) + small))
                 line_y = y + c.px(50) + small + c.px(14)
-                c.text(
-                    (x, line_y),
-                    c.range_text(day),
-                    "serif",
-                    34,
-                    anchor="la",
-                    max_width=column * 0.95,
-                )
-                c.text(
-                    (x, line_y + c.px(46)),
-                    c.condition_label(day.condition),
-                    "serif",
-                    32,
-                    anchor="la",
-                    max_width=column * 0.95,
-                )
+                if two_lines:
+                    c.text(
+                        (x, line_y),
+                        c.range_text(day),
+                        "serif",
+                        34,
+                        anchor="la",
+                        max_width=column * 0.95,
+                    )
+                    c.text(
+                        (x, line_y + c.px(46)),
+                        c.condition_label(day.condition),
+                        "serif",
+                        32,
+                        anchor="la",
+                        max_width=column * 0.95,
+                    )
+                else:
+                    c.text(
+                        (x, line_y),
+                        f"{c.range_text(day)}  {c.condition_label(day.condition)}",
+                        "serif",
+                        30,
+                        anchor="la",
+                        max_width=column * 0.95,
+                    )
         c.footer()
         return c.image
 
