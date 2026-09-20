@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 import socket
 import threading
+import time
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
+from pathlib import Path
 from typing import ClassVar
 from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 import pytest
 from PIL import Image
@@ -19,10 +21,12 @@ from paperwhite_weather.models import WeatherSnapshot
 from paperwhite_weather.providers.mock import MockProvider
 from paperwhite_weather.service import (
     SERVICE_NAME,
+    SKIN_STATE_FILE,
     DashboardServer,
     DashboardService,
     serve_forever,
 )
+from paperwhite_weather.skins import available_skins
 from tests.conftest import FIXED_NOW
 
 
@@ -134,9 +138,162 @@ def test_frames_are_memoized_per_minute(settings: Settings) -> None:
     clock.advance(seconds=60)
     b = service.frame("portrait")
     assert b is not a
-    assert {key[:2] for key in service.state.frames} == {
-        ("portrait", clock.now.strftime("%Y-%m-%dT%H:%M"))
+    assert {key[:3] for key in service.state.frames} == {
+        ("minimal", "portrait", clock.now.strftime("%Y-%m-%dT%H:%M"))
     }
+
+
+def test_skin_defaults_to_config_and_switches(settings: Settings) -> None:
+    clock = FakeClock(FIXED_NOW)
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), clock=clock)
+    service.refresh()
+    assert service.skin == settings.display.skin == "minimal"
+    before = service.frame("landscape")
+    assert service.set_skin("newspaper") == "newspaper"
+    assert service.skin == "newspaper"
+    assert service.health()["skin"] == "newspaper"
+    after = service.frame("landscape")
+    assert after != before, "the same minute must render the new skin, not the memoized frame"
+    assert _png_size(after) == (1072, 1448)
+    service.set_skin("minimal")
+    assert service.frame("landscape") == before
+
+
+def test_next_skin_cycles_in_registry_order(settings: Settings) -> None:
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW))
+    names = available_skins()
+    seen = [service.next_skin() for _ in names]
+    start = names.index("minimal")
+    assert seen == names[start + 1 :] + names[: start + 1]
+    assert service.skin == "minimal"
+
+
+def test_set_skin_rejects_unknown_names(settings: Settings) -> None:
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW))
+    with pytest.raises(ValueError, match="unknown skin 'neon'"):
+        service.set_skin("neon")
+    assert service.skin == "minimal"
+
+
+def test_skin_is_persisted_in_the_state_dir(settings: Settings, tmp_path: Path) -> None:
+    state_dir = tmp_path / "state"  # does not exist yet; the service creates it
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=state_dir)
+    service.set_skin("graphic")
+    assert service.wait_persisted(60.0)
+    assert (state_dir / SKIN_STATE_FILE).read_text() == "graphic\n"
+    restarted = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=state_dir)
+    assert restarted.skin == "graphic"
+    assert restarted.health()["skin"] == "graphic"
+
+
+def test_unknown_persisted_skin_is_ignored(
+    settings: Settings, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    (tmp_path / SKIN_STATE_FILE).write_text("gone\n")
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=tmp_path)
+    assert service.skin == "minimal"
+    assert "Ignoring unknown skin 'gone'" in caplog.text
+
+
+def test_unreadable_state_file_is_ignored(
+    settings: Settings, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    (tmp_path / SKIN_STATE_FILE).write_bytes(b"\xff\xfe\x00not utf-8")
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=tmp_path)
+    assert service.skin == "minimal"
+    assert "Ignoring unreadable skin file" in caplog.text
+    service.set_skin("graphic")  # and the next save replaces the bad file atomically
+    assert service.wait_persisted(60.0)
+    assert (tmp_path / SKIN_STATE_FILE).read_text() == "graphic\n"
+    assert not (tmp_path / "skin.tmp").exists()
+
+
+def test_next_skin_is_atomic_under_concurrency(settings: Settings, tmp_path: Path) -> None:
+    """Concurrent advances each count once, and the file ends with the final skin intact."""
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=tmp_path)
+    names = available_skins()
+    start = names.index(service.skin)
+    barrier = threading.Barrier(8)
+
+    def advance() -> None:
+        barrier.wait()
+        service.next_skin()
+
+    threads = [threading.Thread(target=advance) for _ in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert service.skin == names[(start + 8) % len(names)]
+    assert service.wait_persisted(60.0)
+    assert (tmp_path / SKIN_STATE_FILE).read_text() == service.skin + "\n"
+
+
+def test_unwritable_state_dir_does_not_break_switching(
+    settings: Settings, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    blocker = tmp_path / "file"
+    blocker.write_text("not a directory")
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=blocker)
+    assert service.set_skin("forecast") == "forecast"
+    assert service.skin == "forecast"
+    assert service.wait_persisted(60.0)
+    assert "Could not persist the skin" in caplog.text
+
+
+def test_persist_thread_survives_an_unexpected_error(
+    settings: Settings,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """One bad write is logged; the next switch is still persisted."""
+    from paperwhite_weather import service as module
+
+    original = module.DashboardService._save_skin
+    calls = 0
+
+    def flaky_save(self: DashboardService, name: str) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("simulated bug, not an OSError")
+        original(self, name)
+
+    monkeypatch.setattr(module.DashboardService, "_save_skin", flaky_save)
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=tmp_path)
+    service.set_skin("graphic")
+    assert service.wait_persisted(60.0)
+    assert "Persisting skin 'graphic' failed" in caplog.text
+    service.set_skin("forecast")
+    assert service.wait_persisted(60.0)
+    assert (tmp_path / SKIN_STATE_FILE).read_text() == "forecast\n"
+
+
+def test_requests_never_wait_for_the_disk(
+    settings: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A slow file write (seen to take 30 s on the Pi) must not delay the switch."""
+    from paperwhite_weather import service as module
+
+    gate = threading.Event()
+    original = module.DashboardService._save_skin
+
+    def slow_save(self: DashboardService, name: str) -> None:
+        gate.wait(5)
+        original(self, name)
+
+    monkeypatch.setattr(module.DashboardService, "_save_skin", slow_save)
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=tmp_path)
+    started = time.monotonic()
+    service.set_skin("newspaper")
+    service.next_skin()
+    assert time.monotonic() - started < 1.0
+    assert service.skin == "timeline"
+    assert not service.wait_persisted(0.2), "still writing while the disk is slow"
+    gate.set()
+    assert service.wait_persisted(60.0)
+    assert (tmp_path / SKIN_STATE_FILE).read_text() == "timeline\n"
 
 
 def test_refresh_during_render_does_not_cache_a_stale_frame(
@@ -240,6 +397,88 @@ def test_http_404(server: str, path: str) -> None:
     with pytest.raises(HTTPError) as excinfo:
         _get(f"{server}{path}")
     assert excinfo.value.code == 404
+
+
+def _post(url: str, data: bytes | None = None) -> tuple[int, dict[str, str], bytes]:
+    request = Request(url, data=data if data is not None else b"", method="POST")
+    request.add_header("Content-Type", "application/x-www-form-urlencoded")
+    opener = build_opener(_NoRedirect)
+    with opener.open(request, timeout=5) as response:  # noqa: S310 - loopback
+        return response.status, dict(response.headers), response.read()
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, *args: object, **kwargs: object) -> None:
+        return None
+
+
+def test_http_skins_page_lists_every_skin(server: str) -> None:
+    status, headers, body = _get(f"{server}/skins")
+    assert status == 200
+    assert headers["Content-Type"].startswith("text/html")
+    page = body.decode()
+    for name in available_skins():
+        assert f'value="{name}"' in page
+    assert "<script" not in page
+    assert 'class="current"' in page or "class=current" in page
+    assert 'src="/dashboard/landscape.png"' in page
+
+
+def test_http_post_skin_form_redirects_and_switches(server: str) -> None:
+    _, _, before = _get(f"{server}/dashboard/landscape.png")
+    with pytest.raises(HTTPError) as excinfo:
+        _post(f"{server}/skin", b"name=timeline")
+    assert excinfo.value.code == 303
+    assert excinfo.value.headers["Location"] == "/skins"
+    assert json.loads(_get(f"{server}/health")[2])["skin"] == "timeline"
+    _, _, after = _get(f"{server}/dashboard/landscape.png")
+    assert after != before
+    with pytest.raises(HTTPError) as excinfo:
+        _post(f"{server}/skin", b"name=neon")
+    assert excinfo.value.code == 400
+    assert json.loads(_get(f"{server}/health")[2])["skin"] == "timeline"
+
+
+def test_http_post_skin_path_and_next(server: str) -> None:
+    status, headers, body = _post(f"{server}/skin/big-clock")
+    assert status == 200 and headers["Content-Type"] == "application/json"
+    assert json.loads(body) == {"skin": "big-clock"}
+    names = available_skins()
+    following = names[(names.index("big-clock") + 1) % len(names)]
+    assert json.loads(_post(f"{server}/skin/next")[2]) == {"skin": following}
+    assert json.loads(_get(f"{server}/health")[2])["skin"] == following
+    with pytest.raises(HTTPError) as excinfo:
+        _post(f"{server}/skin/neon")
+    assert excinfo.value.code == 404
+    with pytest.raises(HTTPError) as excinfo:
+        _post(f"{server}/health")
+    assert excinfo.value.code == 404
+
+
+@pytest.mark.parametrize("length", ["notanumber", "-1"])
+def test_http_post_bad_content_length_is_a_400(server: str, length: str) -> None:
+    host, port = server[len("http://") :].split(":")
+    with socket.create_connection((host, int(port)), timeout=5) as sock:
+        sock.sendall(
+            f"POST /skin HTTP/1.1\r\nHost: {host}\r\nContent-Length: {length}\r\n"
+            "Connection: close\r\n\r\n".encode()
+        )
+        reply = sock.recv(4096)
+    assert reply.startswith(b"HTTP/1.0 400"), reply[:60]
+    assert json.loads(_get(f"{server}/health")[2])["skin"] == "minimal"
+
+
+def test_handler_has_a_socket_timeout() -> None:
+    from paperwhite_weather.service import DashboardHandler
+
+    assert DashboardHandler.timeout == 30
+
+
+def test_http_get_does_not_switch(server: str) -> None:
+    with pytest.raises(HTTPError) as excinfo:
+        _get(f"{server}/skin/next")
+    assert excinfo.value.code == 404
+    assert json.loads(_get(f"{server}/health")[2])["skin"] == "minimal"
 
 
 def test_serve_forever_shuts_down_on_keyboard_interrupt(

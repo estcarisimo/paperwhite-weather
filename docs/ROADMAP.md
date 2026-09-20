@@ -156,6 +156,17 @@ Goal: someone else can do this with their Kindle in an evening.
 - [x] Release 0.1.0 on GitHub: tag `v0.1.0` on `c861cab` and release notes, published
       2026-09-20. No PyPI or other package index, by decision (2026-09-20).
 
+## Sprint 6 — Switching skins from the wall
+
+Goal: change the skin without editing the config, and without any control on the panel.
+Both halves share one source of truth: the server's current skin.
+
+- [x] Server: `/skins` page for a phone, `POST /skin` and `POST /skin/next`, persisted in
+      the unit's state directory; `/health` reports it (2026-09-20).
+- [ ] Device: a long press on the panel (about two seconds) asks the server for the next
+      skin and refetches; a tap keeps toggling orientation. Tested on the Kindle with
+      `evemu-event` press/release for reliability, latency, and unchanged suspend/wake.
+
 ## Parking lot
 
 - Additional Kindle models (different framebuffer sizes; `display.width/height` already

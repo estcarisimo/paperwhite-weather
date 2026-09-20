@@ -94,8 +94,12 @@ def test_serve_reads_settings_from_the_environment(monkeypatch: pytest.MonkeyPat
     """The systemd unit configures `serve` through PAPERWHITE_* variables."""
     captured: dict[str, object] = {}
 
-    def fake_serve_forever(settings: object, provider: object, host: str, port: int) -> None:
-        captured.update(settings=settings, provider=provider, host=host, port=port)
+    def fake_serve_forever(
+        settings: object, provider: object, host: str, port: int, state_dir: Path | None
+    ) -> None:
+        captured.update(
+            settings=settings, provider=provider, host=host, port=port, state_dir=state_dir
+        )
 
     monkeypatch.setattr("paperwhite_weather.cli.serve_forever", fake_serve_forever)
     monkeypatch.setenv("PAPERWHITE_CONFIG", str(EXAMPLE_CONFIG))
@@ -106,13 +110,22 @@ def test_serve_reads_settings_from_the_environment(monkeypatch: pytest.MonkeyPat
     assert result.exit_code == 0, result.output
     assert captured["host"] == "127.0.0.1" and captured["port"] == 28765
     assert getattr(captured["provider"], "name", None) == "mock"
+    assert captured["state_dir"] is None, "no state directory unless asked"
 
     result = runner.invoke(app, ["serve", "--port", "28766"])
     assert result.exit_code == 0 and captured["port"] == 28766, "flags override the environment"
 
+    monkeypatch.setenv("PAPERWHITE_STATE_DIR", "/var/tmp/pw-state")
+    result = runner.invoke(app, ["serve"])
+    assert result.exit_code == 0 and captured["state_dir"] == Path("/var/tmp/pw-state")
+
 
 def test_env_example_matches_the_serve_options() -> None:
-    """`.env.example` lists every PAPERWHITE_* variable `serve` reads, with the real default."""
+    """`.env.example` lists every PAPERWHITE_* variable `serve` reads, with the real default.
+
+    A variable that is unset by default appears commented out (``#KEY=example``): an empty
+    ``KEY=`` line would override the systemd unit's own value through ``EnvironmentFile``.
+    """
     from paperwhite_weather.cli import serve
     from paperwhite_weather.service import DEFAULT_CONFIG, DEFAULT_HOST, DEFAULT_PORT
 
@@ -120,17 +133,20 @@ def test_env_example_matches_the_serve_options() -> None:
     documented = dict(
         line.split("=", 1) for line in text.splitlines() if line and not line.startswith("#")
     )
+    optional = {
+        line[1:].split("=", 1)[0]
+        for line in text.splitlines()
+        if line.startswith("#PAPERWHITE_") and "=" in line
+    }
     accepted = {info.envvar for info in serve.__defaults__ or () if getattr(info, "envvar", None)}
-    assert (
-        set(documented)
-        == accepted
-        == {
-            "PAPERWHITE_CONFIG",
-            "PAPERWHITE_PROVIDER",
-            "PAPERWHITE_HOST",
-            "PAPERWHITE_PORT",
-        }
-    )
+    assert set(documented) == {
+        "PAPERWHITE_CONFIG",
+        "PAPERWHITE_PROVIDER",
+        "PAPERWHITE_HOST",
+        "PAPERWHITE_PORT",
+    }
+    assert optional == {"PAPERWHITE_STATE_DIR"}
+    assert set(documented) | optional == accepted
     assert Path(documented["PAPERWHITE_CONFIG"]) == DEFAULT_CONFIG
     assert documented["PAPERWHITE_HOST"] == DEFAULT_HOST
     assert int(documented["PAPERWHITE_PORT"]) == DEFAULT_PORT
@@ -143,7 +159,7 @@ def test_serve_defaults_to_config_yaml_in_the_working_directory(
     captured: dict[str, object] = {}
     monkeypatch.setattr(
         "paperwhite_weather.cli.serve_forever",
-        lambda settings, provider, host, port: captured.update(settings=settings),
+        lambda settings, provider, host, port, state_dir: captured.update(settings=settings),
     )
     monkeypatch.delenv("PAPERWHITE_CONFIG", raising=False)
     monkeypatch.chdir(tmp_path)

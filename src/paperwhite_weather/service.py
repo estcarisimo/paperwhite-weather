@@ -4,10 +4,15 @@ The service keeps the last good :class:`WeatherSnapshot` and renders a frame for
 orientation whenever one is requested, so the clock on the frame is the request time and
 a provider outage never blanks the display. Until the first successful fetch it serves an
 "offline" frame that says so.
+
+The skin can be changed while the service runs (``POST /skin``, or the page at
+``/skins`` from a phone); ``display.skin`` in the configuration is the skin at startup and
+the choice is persisted in the state directory when one is given, so a restart keeps it.
 """
 
 from __future__ import annotations
 
+import html
 import json
 import logging
 import socket
@@ -20,6 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 from pathlib import Path
 from typing import Literal
+from urllib.parse import parse_qs
 
 from PIL import Image
 
@@ -28,6 +34,7 @@ from paperwhite_weather.config import Orientation, Settings
 from paperwhite_weather.models import WeatherSnapshot
 from paperwhite_weather.providers.base import WeatherProvider
 from paperwhite_weather.render import render_dashboard, render_offline
+from paperwhite_weather.skins import available_skins
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +47,8 @@ DEFAULT_CONFIG = Path("config.yaml")
 DEFAULT_HOST = "0.0.0.0"  # nosec B104
 #: Value of ``service`` in ``/health``; clients use it to recognize this server on the LAN.
 SERVICE_NAME = "paperwhite-weather"
+#: File in the state directory that holds the skin chosen at runtime.
+SKIN_STATE_FILE = "skin"
 
 ORIENTATIONS: tuple[Orientation, ...] = ("landscape", "portrait")
 Clock = Callable[[], datetime]
@@ -59,7 +68,8 @@ class ServiceState:
     last_attempt_at: datetime | None = None
     refresh_count: int = 0
     failure_count: int = 0
-    frames: dict[tuple[Orientation, str, str], bytes] = field(default_factory=dict)
+    skin: str = ""
+    frames: dict[tuple[str, Orientation, str, str], bytes] = field(default_factory=dict)
 
 
 class DashboardService:
@@ -73,16 +83,139 @@ class DashboardService:
         Where weather comes from. ``fetch`` is called on every refresh.
     clock
         Returns the current UTC time; injectable for tests.
+    state_dir
+        Directory where the skin chosen at runtime is persisted (created if missing).
+        ``None`` keeps the choice in memory only, so a restart returns to
+        ``settings.display.skin``.
+
+    Notes
+    -----
+    The state file is written by one background thread, never by a request handler: on
+    the maintainer's Raspberry Pi a small file write has been seen to block for over
+    thirty seconds now and then (measured 2026-09-20: write, fsync, and rename alike),
+    and a ``POST /skin`` must answer at once because the Kindle refetches right after
+    it. One writer also means concurrent switches cannot interleave in the file; the
+    latest choice is what lands on disk.
     """
 
     def __init__(
-        self, settings: Settings, provider: WeatherProvider, clock: Clock = _utc_now
+        self,
+        settings: Settings,
+        provider: WeatherProvider,
+        clock: Clock = _utc_now,
+        state_dir: Path | None = None,
     ) -> None:
         self.settings = settings
         self.provider = provider
         self.clock = clock
-        self.state = ServiceState()
+        self.state = ServiceState(skin=settings.display.skin)
         self._lock = threading.Lock()
+        self._skin_file = state_dir / SKIN_STATE_FILE if state_dir is not None else None
+        self._pending_skin: str | None = None
+        self._persist_wake = threading.Event()
+        self._persist_idle = threading.Event()
+        self._persist_idle.set()
+        self._load_skin()
+        if self._skin_file is not None:
+            threading.Thread(target=self._persist_loop, name="persist-skin", daemon=True).start()
+
+    @property
+    def skin(self) -> str:
+        """The skin frames are rendered with right now."""
+        with self._lock:
+            return self.state.skin
+
+    def set_skin(self, name: str) -> str:
+        """Switch to ``name`` for every frame from now on and persist the choice.
+
+        Raises
+        ------
+        ValueError
+            If ``name`` is not a registered skin (nothing changes).
+        """
+        if name not in available_skins():
+            raise ValueError(f"unknown skin {name!r}; available: {', '.join(available_skins())}")
+        with self._lock:
+            self.state.skin = name
+        self._announce(name)
+        return name
+
+    def next_skin(self) -> str:
+        """Switch to the skin after the current one in ``available_skins()`` order, cyclically.
+
+        Read and write happen under one lock acquisition, so two concurrent calls advance
+        twice instead of both landing on the same skin.
+        """
+        names = available_skins()
+        with self._lock:
+            index = names.index(self.state.skin) if self.state.skin in names else -1
+            name = names[(index + 1) % len(names)]
+            self.state.skin = name
+        self._announce(name)
+        return name
+
+    def _announce(self, name: str) -> None:
+        logger.info("Skin set to %r", name)
+        if self._skin_file is None:
+            return
+        with self._lock:
+            self._pending_skin = name
+            self._persist_idle.clear()
+        self._persist_wake.set()
+
+    def wait_persisted(self, timeout: float = 5.0) -> bool:
+        """Block until every skin change so far is on disk (or was given up on with a warning).
+
+        Returns ``False`` if that took longer than ``timeout`` seconds. Used by tests and at
+        shutdown; requests never wait on it.
+        """
+        return self._persist_idle.wait(timeout)
+
+    def _persist_loop(self) -> None:
+        while True:
+            self._persist_wake.wait()
+            with self._lock:
+                name = self._pending_skin
+                self._pending_skin = None
+                self._persist_wake.clear()
+            if name is not None:
+                try:
+                    self._save_skin(name)
+                except Exception:  # noqa: BLE001 - the loop must outlive any one write
+                    logger.exception("Persisting skin %r failed", name)
+            with self._lock:
+                if self._pending_skin is None:
+                    self._persist_idle.set()
+
+    def _load_skin(self) -> None:
+        if self._skin_file is None:
+            return
+        try:
+            name = self._skin_file.read_text(encoding="utf-8").strip()
+        except FileNotFoundError:
+            return
+        except (OSError, UnicodeDecodeError) as exc:
+            logger.warning("Ignoring unreadable skin file %s: %s", self._skin_file, exc)
+            return
+        if name in available_skins():
+            self.state.skin = name
+            logger.info("Skin %r restored from %s", name, self._skin_file)
+        else:
+            logger.warning("Ignoring unknown skin %r in %s", name, self._skin_file)
+
+    def _save_skin(self, name: str) -> None:
+        if self._skin_file is None:
+            return
+        try:
+            self._skin_file.parent.mkdir(parents=True, exist_ok=True)
+            # Write-then-rename, so a crash mid-write leaves the previous choice, not a
+            # truncated file. Only the persist thread runs this, so the temporary name
+            # cannot be shared with another writer.
+            temporary = self._skin_file.with_suffix(".tmp")
+            temporary.write_text(name + "\n", encoding="utf-8")
+            temporary.replace(self._skin_file)
+        except OSError as exc:
+            logger.warning("Could not persist the skin to %s: %s", self._skin_file, exc)
 
     def refresh(self) -> bool:
         """Fetch a new snapshot. Returns ``True`` on success; failures keep the last good one."""
@@ -109,15 +242,17 @@ class DashboardService:
     def frame(self, orientation: Orientation) -> bytes:
         """PNG bytes for ``orientation`` at the current minute, rendered from the cached snapshot.
 
-        Frames are memoized per (orientation, minute, snapshot), so many clients polling in
-        the same minute cost one render, and a refresh that lands mid-render can never
-        leave a frame of the previous snapshot in the cache.
+        Frames are memoized per (skin, orientation, minute, snapshot), so many clients
+        polling in the same minute cost one render, and a refresh that lands mid-render
+        can never leave a frame of the previous snapshot in the cache.
         """
         now = self.clock()
         with self._lock:
             snapshot = self.state.snapshot
             last_attempt_at = self.state.last_attempt_at
+            skin = self.state.skin
             key = (
+                skin,
                 orientation,
                 now.strftime("%Y-%m-%dT%H:%M"),
                 _snapshot_id(snapshot, last_attempt_at),
@@ -125,7 +260,9 @@ class DashboardService:
             cached = self.state.frames.get(key)
         if cached is not None:
             return cached
-        display = self.settings.display.model_copy(update={"orientation": orientation})
+        display = self.settings.display.model_copy(
+            update={"orientation": orientation, "skin": skin}
+        )
         settings = self.settings.model_copy(update={"display": display})
         if snapshot is None:
             image = render_offline(settings, last_attempt_at, "No weather data yet")
@@ -136,7 +273,7 @@ class DashboardService:
             if self.state.snapshot is not snapshot:
                 return data  # a refresh landed meanwhile; serve this frame, cache nothing
             # Keep only the current minute; older keys are never requested again.
-            self.state.frames = {k: v for k, v in self.state.frames.items() if k[1] == key[1]}
+            self.state.frames = {k: v for k, v in self.state.frames.items() if k[2] == key[2]}
             self.state.frames[key] = data
         return data
 
@@ -150,7 +287,8 @@ class DashboardService:
                 "hostname": socket.gethostname(),
                 "status": "ok" if state.snapshot is not None else "no-data",
                 "provider": self.provider.name,
-                "skin": self.settings.display.skin,
+                "skin": state.skin,
+                "skins": available_skins(),
                 "default_orientation": self.settings.display.orientation,
                 "orientations": list(ORIENTATIONS),
                 "refresh_minutes": self.settings.display.refresh_minutes,
@@ -192,10 +330,15 @@ def _png_bytes(image: Image.Image) -> bytes:
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
-    """Routes: ``/health``, ``/dashboard.png``, ``/dashboard/<orientation>.png``, ``/``."""
+    """Routes: ``/health``, ``/dashboard.png``, ``/dashboard/<orientation>.png``, ``/skins``,
+    ``POST /skin``, ``POST /skin/next``, ``/``."""
 
     server: DashboardServer  # narrowed for type checkers
     server_version = f"{SERVICE_NAME}/{__version__}"
+    #: Socket timeout per connection, so a client that stops sending cannot pin a thread.
+    timeout = 30
+    #: Longest POST body read; the form is one short field.
+    max_body = 4096
 
     def version_string(self) -> str:
         """``Server`` header without the Python version (and without the trailing space)."""
@@ -217,6 +360,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 "landscape" if name == "landscape" else "portrait"
             )
             self._send_png(service.frame(orientation))
+        elif path == "/skins":
+            self._send(HTTPStatus.OK, "text/html; charset=utf-8", _skins_page(service))
         elif path == "/":
             self._send(HTTPStatus.OK, "text/plain", _INDEX)
         else:
@@ -224,6 +369,48 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def do_HEAD(self) -> None:  # noqa: N802
         self.do_GET()
+
+    def do_POST(self) -> None:  # noqa: N802
+        """``POST /skin`` with a form field ``name`` (from the ``/skins`` page; answers with a
+        redirect back to it), or ``POST /skin/<name>`` and ``POST /skin/next`` (answer JSON)."""
+        service = self.server.service
+        path = self.path.split("?", 1)[0]
+        if path == "/skin":
+            form = self._form()
+            if form is None:
+                self._send(HTTPStatus.BAD_REQUEST, "text/plain", b"bad Content-Length\n")
+                return
+            name = form.get("name", [""])[0]
+            try:
+                service.set_skin(name)
+            except ValueError as exc:
+                self._send(HTTPStatus.BAD_REQUEST, "text/plain", f"{exc}\n".encode())
+                return
+            self.send_response(HTTPStatus.SEE_OTHER)
+            self.send_header("Location", "/skins")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+        elif path.startswith("/skin/"):
+            name = path[len("/skin/") :]
+            try:
+                skin = service.next_skin() if name == "next" else service.set_skin(name)
+            except ValueError as exc:
+                self._send(HTTPStatus.NOT_FOUND, "text/plain", f"{exc}\n".encode())
+                return
+            self._send(HTTPStatus.OK, "application/json", json.dumps({"skin": skin}).encode())
+        else:
+            self._send(HTTPStatus.NOT_FOUND, "text/plain", b"not found\n")
+
+    def _form(self) -> dict[str, list[str]] | None:
+        """The urlencoded body, or ``None`` when ``Content-Length`` is not a usable number."""
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return None
+        if length < 0:
+            return None
+        body = self.rfile.read(min(length, self.max_body)) if length else b""
+        return parse_qs(body.decode("utf-8", errors="replace"))
 
     def _send_png(self, data: bytes) -> None:
         self._send(HTTPStatus.OK, "image/png", data)
@@ -246,7 +433,53 @@ _INDEX = b"""paperwhite-weather
   /dashboard.png             frame in the configured default orientation
   /dashboard/landscape.png   landscape frame
   /dashboard/portrait.png    portrait frame
+  /skins                     choose the skin from a phone (HTML)
+  POST /skin                 form field name=<skin>; redirects to /skins
+  POST /skin/<name>          set the skin; POST /skin/next cycles; JSON {"skin": ...}
 """
+
+
+_CURRENT = ' class="current"'
+
+
+def _skins_page(service: DashboardService) -> bytes:
+    """The ``/skins`` page: the current frame and one button per skin. No scripts."""
+    current = service.skin
+    following = _after(current)
+    buttons = "\n".join(
+        '<form method="post" action="/skin"><button name="name" '
+        f'value="{html.escape(name)}"{_CURRENT if name == current else ""}>'
+        f"{html.escape(name)}</button></form>"
+        for name in available_skins()
+    )
+    page = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Paperwhite Weather: skins</title>
+<style>
+body{{font:18px/1.4 system-ui,sans-serif;margin:0;padding:16px;max-width:520px;
+margin:auto;color:#111;background:#fff}}
+h1{{font-size:20px;margin:0 0 12px}} p{{margin:0 0 12px;color:#555}}
+img{{width:100%;height:auto;border:1px solid #ccc;display:block;margin-bottom:16px}}
+form{{margin:0 0 8px}} button{{width:100%;padding:14px;font:inherit;font-size:20px;
+border:2px solid #111;background:#fff;color:#111;border-radius:6px}}
+button.current{{background:#111;color:#fff}} button.next{{border-style:dashed}}
+</style></head><body>
+<h1>Paperwhite Weather</h1>
+<p>Skin now: <strong>{html.escape(current)}</strong>. The Kindle shows the new one at its
+next refresh, or right away after a tap on the panel (which also flips the orientation).</p>
+<img src="/dashboard/landscape.png" alt="the current frame, landscape">
+{buttons}
+<form method="post" action="/skin"><button class="next" name="name"
+value="{html.escape(following)}">next: {html.escape(following)}</button></form>
+</body></html>
+"""
+    return page.encode("utf-8")
+
+
+def _after(name: str) -> str:
+    names = available_skins()
+    index = names.index(name) if name in names else -1
+    return names[(index + 1) % len(names)]
 
 
 class DashboardServer(ThreadingHTTPServer):
@@ -265,9 +498,12 @@ def serve_forever(
     provider: WeatherProvider,
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
+    state_dir: Path | None = None,
 ) -> None:
     """Start the refresh loop and serve until interrupted (``KeyboardInterrupt``)."""
-    service = DashboardService(settings, provider)
+    service = DashboardService(settings, provider, state_dir=state_dir)
+    if state_dir is None:
+        logger.info("No state directory: a skin chosen at runtime is forgotten on restart")
     stop = threading.Event()
     refresher = threading.Thread(
         target=service.run_refresh_loop, args=(stop,), name="refresh", daemon=True
@@ -275,9 +511,10 @@ def serve_forever(
     refresher.start()
     with DashboardServer((host, port), service) as server:
         logger.info(
-            "Serving on http://%s:%d/ (default orientation %s)",
+            "Serving on http://%s:%d/ (skin %s, default orientation %s)",
             host,
             port,
+            service.skin,
             settings.display.orientation,
         )
         try:
@@ -286,3 +523,4 @@ def serve_forever(
             logger.info("Shutting down")
         finally:
             stop.set()
+            service.wait_persisted(30.0)  # a slow disk may hold the last switch this long

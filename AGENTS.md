@@ -64,8 +64,11 @@ src/paperwhite_weather/
                     registry in __init__.py: get_skin(name), available_skins()
   render.py         render_dashboard(snapshot, settings, now) -> "L" image at native size;
                     render_offline(settings, last_attempt_at, message); quantize_grayscale(image, levels)
-  service.py        DashboardService (refresh(), frame(orientation), health()),
-                    DashboardServer/DashboardHandler (stdlib http.server), serve_forever()
+  service.py        DashboardService (refresh(), frame(orientation), health(), skin,
+                    set_skin(), next_skin(); the runtime skin persisted in state_dir),
+                    DashboardServer/DashboardHandler (stdlib http.server: /health,
+                    /dashboard*.png, /skins page, POST /skin, POST /skin/<name|next>),
+                    serve_forever()
   cli.py            Typer app: `paperwhite render|gallery|serve|skins|providers|version`
 tests/              pytest; conftest.py has the example-config and fixed-snapshot fixtures;
                     fixtures/ holds a recorded Open-Meteo response (metric, Chicago);
@@ -135,8 +138,10 @@ uv build                                    # sdist + wheel via uv_build
   fixture times. `tests/test_sun.py` pins them
   to a US Naval Observatory table (`math` marker).
 - The service renders on request (clock = request time) and memoizes per minute; it never
-  stores rendered files on disk. HTTP is stdlib `http.server`; do not add a web framework
-  for four routes.
+  stores rendered files on disk. The only thing it writes is the runtime skin choice, one
+  line in `PAPERWHITE_STATE_DIR` (the unit's `StateDirectory`). HTTP is stdlib
+  `http.server`; do not add a web framework for a handful of routes, and no scripts on the
+  `/skins` page.
 - The server's hostname is never a constant or a default: clients configure it, `/health`
   reports it, and docs write `<server>`. The maintainer's Pi (`smokingpi`) appears only
   where a verified result is quoted.
