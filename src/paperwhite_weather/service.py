@@ -391,6 +391,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", "0")
             self.end_headers()
         elif path.startswith("/skin/"):
+            self._form()  # read (and ignore) any body a client sent, up to max_body
             name = path[len("/skin/") :]
             try:
                 skin = service.next_skin() if name == "next" else service.set_skin(name)

@@ -474,6 +474,30 @@ def test_handler_has_a_socket_timeout() -> None:
     assert DashboardHandler.timeout == 30
 
 
+def test_http_post_path_routes_read_the_body(server: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """/skin/<name> and /skin/next consume a request body (up to max_body) before answering.
+
+    The server speaks HTTP/1.0 and closes after each response, so an unread body is not
+    observable from a small client; the drain is asserted directly, and the answer must be
+    the same as without a body.
+    """
+    from paperwhite_weather.service import DashboardHandler
+
+    drained: list[int] = []
+    original = DashboardHandler._form
+
+    def counting_form(self: DashboardHandler) -> dict[str, list[str]] | None:
+        drained.append(int(self.headers.get("Content-Length") or 0))
+        return original(self)
+
+    monkeypatch.setattr(DashboardHandler, "_form", counting_form)
+    status, _, body = _post(f"{server}/skin/graphic", b"ignored=1&name=neon")
+    assert status == 200 and json.loads(body) == {"skin": "graphic"}
+    status, _, body = _post(f"{server}/skin/next", b"x" * 10)
+    assert status == 200 and json.loads(body)["skin"] != "graphic"
+    assert drained == [len(b"ignored=1&name=neon"), 10]
+
+
 def test_http_get_does_not_switch(server: str) -> None:
     with pytest.raises(HTTPError) as excinfo:
         _get(f"{server}/skin/next")
