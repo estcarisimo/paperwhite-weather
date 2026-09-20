@@ -8,7 +8,7 @@ import pytest
 from PIL import Image, ImageDraw
 
 from paperwhite_weather.models import Condition, DailyForecast
-from paperwhite_weather.skins.band_chart import draw_band_chart
+from paperwhite_weather.skins.band_chart import _ICON_SIZE, _NAME_SIZE, draw_band_chart
 
 _DAYS = (
     (Condition.PARTLY_CLOUDY, 57, 75, 10),
@@ -74,7 +74,7 @@ def test_higher_temperatures_sit_higher_on_one_axis() -> None:
     # below Sat's low (54) on the same axis.
     tue, sat = dot_rows(4), dot_rows(1)
     assert tue and sat
-    band = (20 + 96 + 12 + 34 + 72, 540 - 40 - 36)  # the curve area between labels
+    band = (20 + _ICON_SIZE + 12 + _NAME_SIZE + 72, 540 - 40 - 36)  # the curve area
     tue_in = [y for y in tue if band[0] <= y <= band[1]]
     sat_in = [y for y in sat if band[0] <= y <= band[1]]
     assert min(tue_in) < min(sat_in) and max(tue_in) > max(sat_in)
@@ -107,7 +107,9 @@ def test_ring_never_touches_the_dots(current: float) -> None:
     x = 20 + column * 0.5
     # The dots of today's column: the topmost and bottommost dark pixels on its center line.
     rows = [
-        y for y in range(20 + 96 + 12 + 34 + 72, 540 - 76) if plain.getpixel((round(x), y)) < 128
+        y
+        for y in range(20 + _ICON_SIZE + 12 + _NAME_SIZE + 72, 540 - 76)
+        if plain.getpixel((round(x), y)) < 128
     ]
     high_y, low_y = min(rows), max(rows)
     for center in (high_y + 9, low_y - 9):

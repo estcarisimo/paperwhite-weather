@@ -10,6 +10,7 @@ from paperwhite_weather.skins.forecast import ForecastSkin
 from paperwhite_weather.skins.graphic import GraphicSkin
 from paperwhite_weather.skins.minimal import MinimalSkin
 from paperwhite_weather.skins.newspaper import NewspaperSkin
+from paperwhite_weather.skins.timeline import TimelineSkin
 from paperwhite_weather.skins.weather_station import WeatherStationSkin
 
 _FACTORIES: dict[str, Callable[[], Skin]] = {
@@ -19,6 +20,7 @@ _FACTORIES: dict[str, Callable[[], Skin]] = {
     BigClockSkin.name: BigClockSkin,
     ForecastSkin.name: ForecastSkin,
     GraphicSkin.name: GraphicSkin,
+    TimelineSkin.name: TimelineSkin,
 }
 
 
@@ -51,6 +53,7 @@ __all__ = [
     "MinimalSkin",
     "NewspaperSkin",
     "Skin",
+    "TimelineSkin",
     "WeatherStationSkin",
     "available_skins",
     "get_skin",
