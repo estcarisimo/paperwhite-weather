@@ -185,12 +185,13 @@ wait_for_tap() {
     # of the gesture), 1 on timeout. A lift or movement seen without its landing (the
     # loop was painting when the finger arrived) is not a gesture and is skipped.
     [ -e "$TOUCH_DEVICE" ] || { sleep "$1"; return 1; }
+    # No local variables in ash: these names must not collide with run_loop's.
     exec 3< "$TOUCH_DEVICE"
-    deadline=$(( $(date +%s) + $1 ))
+    tap_deadline=$(( $(date +%s) + $1 ))
     while :; do
-        left=$(( deadline - $(date +%s) ))
-        [ "$left" -gt 0 ] || { exec 3<&-; return 1; }
-        read_event "$left" || continue
+        tap_left=$(( tap_deadline - $(date +%s) ))
+        [ "$tap_left" -gt 0 ] || { exec 3<&-; return 1; }
+        read_event "$tap_left" || continue
         event_is_touch 1 && return 0
     done
 }
@@ -199,8 +200,8 @@ press_is_long() {
     # Called right after wait_for_tap. Returns 0 when the finger is still down
     # LONG_PRESS_SECONDS later, 1 as soon as it lifts. Clock granularity is one second, so
     # a hold of LONG_PRESS_SECONDS to LONG_PRESS_SECONDS+1 counts as long.
-    start="$(date +%s)"
-    while [ $(( $(date +%s) - start )) -lt "$LONG_PRESS_SECONDS" ]; do
+    press_start="$(date +%s)"
+    while [ $(( $(date +%s) - press_start )) -lt "$LONG_PRESS_SECONDS" ]; do
         read_event 1 || continue
         event_is_touch 0 && return 1
     done
@@ -425,6 +426,7 @@ case "$1" in
         tail -n 5 "$LOG" 2>/dev/null
         ;;
     next-skin)
+        load_config
         next_skin && echo "asked the server for the next skin (shown at the next refresh or tap)"
         ;;
     toggle)

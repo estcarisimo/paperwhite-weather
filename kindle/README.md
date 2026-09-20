@@ -43,7 +43,7 @@ Nothing is drawn on the frame for this; the two gestures are the only controls.
   /skin/next`), then fetch and paint it. The server owns the choice, so the phone page
   at `http://<server>:8765/skins` and the panel always agree, and a restart of either
   side keeps it. Order: big-clock, forecast, graphic, minimal, newspaper, timeline,
-  weather-station, then around again; the frame's footer names the skin.
+  weather-station, then around again; the phone page shows which one is current.
 
 Both only work while the device is awake (the `AWAKE_SECONDS` window after each refresh;
 the power button opens another). The client reads the touch controller through one open
