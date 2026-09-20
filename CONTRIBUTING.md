@@ -104,9 +104,8 @@ documenting them; a command that has not been run on hardware is labeled as a dr
 4. Tag and publish a GitHub release: `git tag vX.Y.Z && git push origin vX.Y.Z`, then
    `gh release create vX.Y.Z --generate-notes`.
 
-The project is not on PyPI yet. The name `paperwhite-weather` was free on PyPI and
-TestPyPI on 2026-09-18, but until a release is published there, install from GitHub and
-do not add a PyPI badge.
+The project is not published to PyPI or any other package index, by decision; it is
+installed from GitHub. Do not add a PyPI badge or `pip install` instructions.
 
 ## Reporting issues
 

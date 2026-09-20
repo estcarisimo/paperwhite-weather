@@ -39,7 +39,7 @@ uv run paperwhite render --config config.yaml --output dashboard.png
 ```
 
 Requirements: Python 3.10 or newer and [uv](https://github.com/astral-sh/uv). The
-project is not on PyPI yet; install from GitHub as above.
+project is not published to PyPI or any other package index; install from GitHub as above.
 
 ## 🖼️ Put it on the wall
 

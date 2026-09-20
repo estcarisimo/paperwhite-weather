@@ -36,7 +36,8 @@ change since goes through a pull request.
 
 The `SECURITY.md` link to `security/advisories/new` is the standard private-report URL for a
 repository with private vulnerability reporting enabled. It has not been exercised with a test
-report, on purpose.
+report, on purpose. No email address appears in the repository; contact paths are GitHub-only
+(decision of 2026-09-20).
 
 ## Community profile
 
@@ -60,7 +61,7 @@ report, on purpose.
 | --- | --- | --- |
 | `paperwhite-weather` on PyPI | not registered (free) | `curl -s -o /dev/null -w "%{http_code}" https://pypi.org/pypi/paperwhite-weather/json` → 404 |
 | `paperwhite-weather` on TestPyPI | not registered (free) | same against `test.pypi.org` → 404 |
-| Trusted Publishing | not configured; no release yet | blocked on the first release |
+| Publication | **none, by decision (2026-09-20)**: the project is installed from GitHub and is not published to PyPI or any other package index; no Trusted Publishing | maintainer's decision |
 
 ## Re-verified on 2026-09-20 (Sprint 5)
 
@@ -71,7 +72,6 @@ report, on purpose.
 | `SECURITY.md` report link | resolves | `curl -o /dev/null -w '%{http_code} %{redirect_url}' .../security/advisories/new` → `302` to `github.com/login?return_to=…/security/advisories/new` (the form needs a GitHub login); `.../security/advisories` and `.../security` → 200 |
 | Secret scanning, push protection, Dependabot security updates | enabled | `gh api repos/estcarisimo/paperwhite-weather --jq .security_and_analysis` |
 | Open alerts (Dependabot / code scanning / secret scanning) | 0 / 0 / 0 | `gh api ".../{dependabot,code-scanning,secret-scanning}/alerts?state=open"` |
-| `paperwhite-weather` on PyPI | still free | `curl -s -o /dev/null -w "%{http_code}" https://pypi.org/pypi/paperwhite-weather/json` → 404 |
 
 ## Blocked or pending
 

@@ -121,4 +121,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   the Pi by DNS name and the first live frame on the panel).
 
 ### Changed
+- `pyproject.toml` uses the PEP 639 `license = "MIT"` expression and `license-files`
+  instead of the deprecated license classifier; the wheel now carries
+  `License-Expression` and `License-File`. The project is not published to PyPI or any
+  other package index, by decision; the docs say so instead of "not yet".
+- `SECURITY.md` and `CODE_OF_CONDUCT.md` no longer contain an email address; every
+  contact path goes through GitHub.
 - Default orientation is now `landscape` (was `portrait`).
