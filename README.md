@@ -30,6 +30,7 @@ Documentation: [estcarisimo.github.io/paperwhite-weather](https://estcarisimo.gi
 - 🕒 **Honest timestamps**: every frame shows when its data was fetched, so stale data is obvious
 - 🧪 **Testable without a Kindle**: the renderer runs anywhere Python runs; CI uploads the rendered frame
 - 📡 **LAN service**: `paperwhite serve` publishes `/dashboard/{landscape,portrait}.png` and a `/health` identity on port 8765; a failed fetch keeps the last good frame
+- 📱 **Switch skins from your phone**: `/skins` on the service is a page with one button per skin; the wall changes at the next refresh, and no control ever appears on the panel
 - 🔒 **Your location stays local**: configuration is git-ignored and never leaves your network except to the weather provider you choose
 
 ## 🚀 Quick Start

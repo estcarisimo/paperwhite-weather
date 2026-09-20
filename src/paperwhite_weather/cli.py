@@ -124,15 +124,23 @@ def serve(
     port: int = typer.Option(
         DEFAULT_PORT, "--port", help="TCP port to listen on.", envvar="PAPERWHITE_PORT"
     ),
+    state_dir: Path | None = typer.Option(
+        None,
+        "--state-dir",
+        file_okay=False,
+        envvar="PAPERWHITE_STATE_DIR",
+        help="Directory that keeps the skin chosen at runtime across restarts "
+        "(default: none, the choice is forgotten on restart).",
+    ),
 ) -> None:
     """Fetch weather on a schedule and serve dashboard frames over HTTP on the LAN.
 
     Every option can also come from the environment (``PAPERWHITE_CONFIG``,
-    ``PAPERWHITE_PROVIDER``, ``PAPERWHITE_HOST``, ``PAPERWHITE_PORT``), which is how the
-    systemd unit configures it.
+    ``PAPERWHITE_PROVIDER``, ``PAPERWHITE_HOST``, ``PAPERWHITE_PORT``,
+    ``PAPERWHITE_STATE_DIR``), which is how the systemd unit configures it.
     """
     settings = load_settings(config)
-    serve_forever(settings, get_provider(provider), host=host, port=port)
+    serve_forever(settings, get_provider(provider), host=host, port=port, state_dir=state_dir)
 
 
 @app.command()

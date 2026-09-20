@@ -14,6 +14,8 @@ snapshot, and answers on port 8765:
 | `/health` | JSON: `service`, `version`, `status` (`ok` or `no-data`), provider, skin, default orientation, refresh interval, `fetched_at`, `last_attempt_at`, `last_error`, counters |
 | `/dashboard.png` | Frame in the configured default orientation |
 | `/dashboard/landscape.png`, `/dashboard/portrait.png` | Frame in that orientation |
+| `/skins` | A page for a phone: the current frame and one button per skin (no scripts) |
+| `POST /skin` (form field `name`), `POST /skin/<name>`, `POST /skin/next` | Switch the skin for every client from now on; `/health` reports it |
 | `/` | Plain-text list of the routes |
 
 Frames are rendered when requested, with the request time on the clock, and memoized per
@@ -21,6 +23,14 @@ minute. Until the first successful fetch the frames say "No weather data yet" wi
 of the last fetch attempt (or "No fetch attempted yet"), not the request time, so a long
 outage looks like one. A failed refresh keeps the previous snapshot and is reported in
 `/health` as `last_error`.
+
+The skin can be changed while the service runs, from any phone or laptop on the LAN:
+open `http://<server>.lan:8765/skins` and tap a name. Every client shows the new skin at
+its next refresh (a tap on the Kindle fetches a frame right away). `display.skin` in
+`config.yaml` is the skin at startup; the runtime choice is persisted in
+`PAPERWHITE_STATE_DIR` (the unit sets `~/.local/state/paperwhite-weather`), so a restart
+keeps it. Anyone on the LAN can switch it; there is no authentication, by design, as with
+the frames themselves.
 
 ## Configuration
 
@@ -32,6 +42,7 @@ The unit passes settings as environment variables, so it never needs editing:
 | `PAPERWHITE_PROVIDER` | `mock` | Weather provider name (`paperwhite providers`) |
 | `PAPERWHITE_HOST` | `0.0.0.0` | Interface to listen on |
 | `PAPERWHITE_PORT` | `8765` | TCP port |
+| `PAPERWHITE_STATE_DIR` | `~/.local/state/paperwhite-weather` (unit only; unset for a manual `serve`) | Keeps the skin chosen at runtime across restarts |
 
 Override any of them in `<repo>/.env` (git-ignored; `cp .env.example .env` and edit) or
 with `systemctl --user edit paperwhite-weather.service`. The same variables work for a

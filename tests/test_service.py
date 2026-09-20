@@ -6,9 +6,10 @@ import threading
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
+from pathlib import Path
 from typing import ClassVar
 from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 import pytest
 from PIL import Image
@@ -19,10 +20,12 @@ from paperwhite_weather.models import WeatherSnapshot
 from paperwhite_weather.providers.mock import MockProvider
 from paperwhite_weather.service import (
     SERVICE_NAME,
+    SKIN_STATE_FILE,
     DashboardServer,
     DashboardService,
     serve_forever,
 )
+from paperwhite_weather.skins import available_skins
 from tests.conftest import FIXED_NOW
 
 
@@ -134,9 +137,71 @@ def test_frames_are_memoized_per_minute(settings: Settings) -> None:
     clock.advance(seconds=60)
     b = service.frame("portrait")
     assert b is not a
-    assert {key[:2] for key in service.state.frames} == {
-        ("portrait", clock.now.strftime("%Y-%m-%dT%H:%M"))
+    assert {key[:3] for key in service.state.frames} == {
+        ("minimal", "portrait", clock.now.strftime("%Y-%m-%dT%H:%M"))
     }
+
+
+def test_skin_defaults_to_config_and_switches(settings: Settings) -> None:
+    clock = FakeClock(FIXED_NOW)
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), clock=clock)
+    service.refresh()
+    assert service.skin == settings.display.skin == "minimal"
+    before = service.frame("landscape")
+    assert service.set_skin("newspaper") == "newspaper"
+    assert service.skin == "newspaper"
+    assert service.health()["skin"] == "newspaper"
+    after = service.frame("landscape")
+    assert after != before, "the same minute must render the new skin, not the memoized frame"
+    assert _png_size(after) == (1072, 1448)
+    service.set_skin("minimal")
+    assert service.frame("landscape") == before
+
+
+def test_next_skin_cycles_in_registry_order(settings: Settings) -> None:
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW))
+    names = available_skins()
+    seen = [service.next_skin() for _ in names]
+    start = names.index("minimal")
+    assert seen == names[start + 1 :] + names[: start + 1]
+    assert service.skin == "minimal"
+
+
+def test_set_skin_rejects_unknown_names(settings: Settings) -> None:
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW))
+    with pytest.raises(ValueError, match="unknown skin 'neon'"):
+        service.set_skin("neon")
+    assert service.skin == "minimal"
+
+
+def test_skin_is_persisted_in_the_state_dir(settings: Settings, tmp_path: Path) -> None:
+    state_dir = tmp_path / "state"  # does not exist yet; the service creates it
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=state_dir)
+    service.set_skin("graphic")
+    assert (state_dir / SKIN_STATE_FILE).read_text() == "graphic\n"
+    restarted = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=state_dir)
+    assert restarted.skin == "graphic"
+    assert restarted.health()["skin"] == "graphic"
+
+
+def test_unknown_persisted_skin_is_ignored(
+    settings: Settings, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    (tmp_path / SKIN_STATE_FILE).write_text("gone\n")
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=tmp_path)
+    assert service.skin == "minimal"
+    assert "Ignoring unknown skin 'gone'" in caplog.text
+
+
+def test_unwritable_state_dir_does_not_break_switching(
+    settings: Settings, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    blocker = tmp_path / "file"
+    blocker.write_text("not a directory")
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=blocker)
+    assert service.set_skin("forecast") == "forecast"
+    assert service.skin == "forecast"
+    assert "Could not persist the skin" in caplog.text
 
 
 def test_refresh_during_render_does_not_cache_a_stale_frame(
@@ -240,6 +305,69 @@ def test_http_404(server: str, path: str) -> None:
     with pytest.raises(HTTPError) as excinfo:
         _get(f"{server}{path}")
     assert excinfo.value.code == 404
+
+
+def _post(url: str, data: bytes | None = None) -> tuple[int, dict[str, str], bytes]:
+    request = Request(url, data=data if data is not None else b"", method="POST")
+    request.add_header("Content-Type", "application/x-www-form-urlencoded")
+    opener = build_opener(_NoRedirect)
+    with opener.open(request, timeout=5) as response:  # noqa: S310 - loopback
+        return response.status, dict(response.headers), response.read()
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, *args: object, **kwargs: object) -> None:
+        return None
+
+
+def test_http_skins_page_lists_every_skin(server: str) -> None:
+    status, headers, body = _get(f"{server}/skins")
+    assert status == 200
+    assert headers["Content-Type"].startswith("text/html")
+    page = body.decode()
+    for name in available_skins():
+        assert f'value="{name}"' in page
+    assert "<script" not in page
+    assert 'class="current"' in page or "class=current" in page
+    assert 'src="/dashboard/landscape.png"' in page
+
+
+def test_http_post_skin_form_redirects_and_switches(server: str) -> None:
+    _, _, before = _get(f"{server}/dashboard/landscape.png")
+    with pytest.raises(HTTPError) as excinfo:
+        _post(f"{server}/skin", b"name=timeline")
+    assert excinfo.value.code == 303
+    assert excinfo.value.headers["Location"] == "/skins"
+    assert json.loads(_get(f"{server}/health")[2])["skin"] == "timeline"
+    _, _, after = _get(f"{server}/dashboard/landscape.png")
+    assert after != before
+    with pytest.raises(HTTPError) as excinfo:
+        _post(f"{server}/skin", b"name=neon")
+    assert excinfo.value.code == 400
+    assert json.loads(_get(f"{server}/health")[2])["skin"] == "timeline"
+
+
+def test_http_post_skin_path_and_next(server: str) -> None:
+    status, headers, body = _post(f"{server}/skin/big-clock")
+    assert status == 200 and headers["Content-Type"] == "application/json"
+    assert json.loads(body) == {"skin": "big-clock"}
+    names = available_skins()
+    following = names[(names.index("big-clock") + 1) % len(names)]
+    assert json.loads(_post(f"{server}/skin/next")[2]) == {"skin": following}
+    assert json.loads(_get(f"{server}/health")[2])["skin"] == following
+    with pytest.raises(HTTPError) as excinfo:
+        _post(f"{server}/skin/neon")
+    assert excinfo.value.code == 404
+    with pytest.raises(HTTPError) as excinfo:
+        _post(f"{server}/health")
+    assert excinfo.value.code == 404
+
+
+def test_http_get_does_not_switch(server: str) -> None:
+    with pytest.raises(HTTPError) as excinfo:
+        _get(f"{server}/skin/next")
+    assert excinfo.value.code == 404
+    assert json.loads(_get(f"{server}/health")[2])["skin"] == "minimal"
 
 
 def test_serve_forever_shuts_down_on_keyboard_interrupt(
