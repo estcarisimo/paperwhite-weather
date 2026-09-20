@@ -391,6 +391,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", "0")
             self.end_headers()
         elif path.startswith("/skin/"):
+            self._form()  # drain any body a client sent, so the connection ends cleanly
             name = path[len("/skin/") :]
             try:
                 skin = service.next_skin() if name == "next" else service.set_skin(name)

@@ -93,7 +93,7 @@ uv run ruff check src/ tests/
 uv run ruff format src/ tests/              # CI checks with --check
 uv run mypy src/paperwhite_weather          # blocking in CI (disallow_untyped_defs)
 uv run pytest --cov=paperwhite_weather      # CI enforces --cov-fail-under=85
-uv sync --group docs && uv run mkdocs build --strict   # the docs site; `mkdocs serve` to preview
+uv sync --group docs && uv run mkdocs build --strict   # the docs site; `uv run mkdocs serve` to preview
 uv run paperwhite render --config config.example.yaml --output /tmp/dashboard.png
 uv run paperwhite render -c config.example.yaml -o /tmp/d.png --now 2026-09-18T21:45:00+00:00
 uv run paperwhite gallery -c config.example.yaml -o tests/goldens --now 2026-09-18T21:45:00+00:00  # regenerate goldens on purpose

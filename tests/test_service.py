@@ -474,6 +474,14 @@ def test_handler_has_a_socket_timeout() -> None:
     assert DashboardHandler.timeout == 30
 
 
+def test_http_post_path_routes_accept_and_drain_a_body(server: str) -> None:
+    """A client that sends a body to /skin/<name> gets the same answer as one that does not."""
+    status, _, body = _post(f"{server}/skin/graphic", b"ignored=1&name=neon")
+    assert status == 200 and json.loads(body) == {"skin": "graphic"}
+    status, _, body = _post(f"{server}/skin/next", b"x" * 10)
+    assert status == 200 and json.loads(body)["skin"] != "graphic"
+
+
 def test_http_get_does_not_switch(server: str) -> None:
     with pytest.raises(HTTPError) as excinfo:
         _get(f"{server}/skin/next")

@@ -212,7 +212,8 @@ http_post() {
     # POST with an empty body to $1; prints the response body. curl ships with the
     # firmware (the jailbreak used it); BusyBox wget here has no --post-data.
     if command -v curl > /dev/null 2>&1; then
-        curl -s -m 15 -X POST "$1" 2>/dev/null
+        # -f: an HTTP error status is a failure, not a body to log as the answer.
+        curl -sf -m 15 -X POST "$1" 2>/dev/null || { log "post: $1 failed"; return 1; }
     else
         log "post: curl not found; cannot $1"
         return 1
@@ -270,11 +271,13 @@ can_suspend() {
 
 suspend_until() {
     # $1: epoch seconds. Sets the RTC alarm and suspends; returns after resume.
-    now="$(date +%s)"
-    [ "$1" -gt $((now + 5)) ] || { log "suspend: deadline too close ($(( $1 - now ))s)"; return 1; }
+    # (suspend_now, not now: run_loop's variable of that name must survive this call.)
+    suspend_now="$(date +%s)"
+    [ "$1" -gt $((suspend_now + 5)) ] \
+        || { log "suspend: deadline too close ($(( $1 - suspend_now ))s)"; return 1; }
     echo 0 > "$RTC_WAKEALARM" 2>/dev/null
     echo "$1" > "$RTC_WAKEALARM" 2>/dev/null || { log "suspend: cannot set wakealarm"; return 1; }
-    log "suspend for $(( $1 - now ))s (battery $(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null)%)"
+    log "suspend for $(( $1 - suspend_now ))s (battery $(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null)%)"
     sync
     echo mem > /sys/power/state 2>/dev/null || { log "suspend: echo mem failed"; return 1; }
     log "resumed"
