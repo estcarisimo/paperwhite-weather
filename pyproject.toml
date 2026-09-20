@@ -43,6 +43,10 @@ dev = [
     "types-PyYAML",
     "pre-commit>=4.0",
 ]
+docs = [
+    "mkdocs>=1.6.1,<2",
+    "mkdocs-material>=9.7.7",
+]
 
 [project.urls]
 Homepage = "https://github.com/estcarisimo/paperwhite-weather"

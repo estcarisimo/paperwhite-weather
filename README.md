@@ -8,6 +8,10 @@ displays it.
 [![CI](https://github.com/estcarisimo/paperwhite-weather/actions/workflows/ci.yml/badge.svg)](https://github.com/estcarisimo/paperwhite-weather/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Docs](https://github.com/estcarisimo/paperwhite-weather/actions/workflows/docs.yml/badge.svg)](https://estcarisimo.github.io/paperwhite-weather/)
+
+Documentation: [estcarisimo.github.io/paperwhite-weather](https://estcarisimo.github.io/paperwhite-weather/)
+(the `docs/` folder, built with MkDocs and published on GitHub Pages from `main`).
 
 > **Status: on the wall, version 0.1.0 (2026-09-20).** The service runs on the
 > maintainer's Raspberry Pi with live Open-Meteo data; the Kindle fetches a frame every

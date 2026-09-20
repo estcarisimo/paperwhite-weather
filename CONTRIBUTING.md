@@ -87,6 +87,14 @@ rounds on merge conflicts.
 Repository admins can technically bypass the ruleset. Treat that as an emergency-only
 escape hatch and say so in the PR when it is used.
 
+## Documentation site
+
+The `docs/` folder is also the MkDocs site published at
+https://estcarisimo.github.io/paperwhite-weather/. `uv sync --group docs`, then
+`uv run mkdocs serve` to preview and `uv run mkdocs build --strict` to check; CI runs the
+strict build on every pull request and deploys from `main`. A new page goes into `nav` in
+`mkdocs.yml`.
+
 ## Working on the Kindle side
 
 Scripts under `kindle/` run as root on a jailbroken device. Test them on the device before
