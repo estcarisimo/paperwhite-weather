@@ -40,6 +40,25 @@ unit does (`EnvironmentFile`).
 
 ## Install
 
+One command, from the checkout:
+
+```bash
+deploy/install.sh
+```
+
+It runs `uv sync --locked`, creates `config.yaml` and `.env` from the examples if they
+do not exist (never overwriting them), writes the unit with the checkout's path, enables
+and restarts it, warns if lingering is off, and waits for `/health` to answer. Re-run it
+after editing `.env` or after `git pull`. Verified on the maintainer's Pi on 2026-09-20,
+both on a fresh clone (mock provider, `status ok`, 1.4 s) and over the existing install
+(config and `.env` kept, `open-meteo`, `status ok`).
+
+Then edit `config.yaml` (coordinates, time zone, units, skin) and `.env`
+(`PAPERWHITE_PROVIDER=open-meteo` for live weather), and
+`systemctl --user restart paperwhite-weather.service`.
+
+The same steps by hand:
+
 ```bash
 cd ~/paperwhite-weather
 uv sync
@@ -52,9 +71,10 @@ systemctl --user daemon-reload
 systemctl --user enable --now paperwhite-weather.service
 ```
 
-Requirements: `loginctl show-user $USER -p Linger` must print `Linger=yes` so the user
-service starts at boot without a login (`sudo loginctl enable-linger $USER` otherwise).
-Port 8765 must be free (`ss -ltn | grep 8765`).
+Requirements: `uv` on the path; `loginctl show-user $USER -p Linger` must print
+`Linger=yes` so the user service starts at boot without a login
+(`sudo loginctl enable-linger $USER` otherwise); port 8765 must be free
+(`ss -ltn | grep 8765`), or set `PAPERWHITE_PORT` in `.env`.
 
 ## Check
 
@@ -88,9 +108,10 @@ does not depend on it.
 ## Update
 
 ```bash
-cd ~/paperwhite-weather && git pull && uv sync
-systemctl --user restart paperwhite-weather.service
+cd ~/paperwhite-weather && git pull && deploy/install.sh
 ```
+
+(or `uv sync` and `systemctl --user restart paperwhite-weather.service` by hand).
 
 ## Remove
 

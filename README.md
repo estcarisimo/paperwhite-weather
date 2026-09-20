@@ -9,10 +9,10 @@ displays it.
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> **Status: device bring-up (Sprint 1 done, 2026-09-19).** The renderer, data model, CLI,
-> a first skin, and the LAN service work today with fixture data. The Kindle is jailbroken,
-> reachable over SSH, and has displayed a live frame fetched from the service by DNS name.
-> Unattended operation on the device (Sprint 3) and live weather (Sprint 2) are next; see
+> **Status: on the wall (2026-09-20).** The service runs on the maintainer's Raspberry Pi
+> with live Open-Meteo data; the Kindle fetches a frame every 15 minutes, sleeps between
+> refreshes, and starts the dashboard by itself after a reboot. Seven skins are done;
+> what is left before a 0.1.0 release is polish and documentation, see
 > [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## ✨ Features
@@ -31,7 +31,7 @@ displays it.
 ## 🚀 Quick Start
 
 ```bash
-git clone git@github.com:estcarisimo/paperwhite-weather.git
+git clone https://github.com/estcarisimo/paperwhite-weather.git
 cd paperwhite-weather
 uv sync
 cp config.example.yaml config.yaml     # edit coordinates, time zone, units, skin
@@ -40,6 +40,38 @@ uv run paperwhite render --config config.yaml --output dashboard.png
 
 Requirements: Python 3.10 or newer and [uv](https://github.com/astral-sh/uv). The
 project is not on PyPI yet; install from GitHub as above.
+
+## 🖼️ Put it on the wall
+
+You need a machine on your LAN that stays on (a Raspberry Pi will do) and a jailbroken
+Kindle. The whole setup is one command on the server and a few file copies on the Kindle.
+
+**1. The server.** On the always-on machine, from the checkout:
+
+```bash
+deploy/install.sh
+```
+
+That installs a user-level systemd unit that fetches weather every 15 minutes and serves
+the frame on port 8765; it creates `config.yaml` and `.env` from the examples if you have
+not already, and re-running it after `git pull` is the update. Edit `config.yaml` with
+your coordinates and time zone, set `PAPERWHITE_PROVIDER=open-meteo` in `.env`, restart
+the unit. [`docs/DEPLOY.md`](docs/DEPLOY.md) has the details, the routes, and how to
+check it (`curl http://<server>.lan:8765/health`).
+
+**2. The Kindle.** Jailbreak it first: [`docs/DEVICE.md`](docs/DEVICE.md) has the runbook
+that was followed for a Paperwhite 3 on firmware 5.16.2.1.1 (WinterBreak2, then KUAL,
+MRPI, and USBNetwork for SSH over Wi-Fi), with the legal note and the update-blocking
+step. Then copy the client to the device and tell it your server's hostname: over SSH
+(the verified way) or with `kindle/install.sh` over USB (still a draft);
+[`kindle/README.md`](kindle/README.md) has both, and what `start` does to the device.
+Start the dashboard from KUAL (Paperwhite Weather → Start dashboard). It finds the server
+by name, falls back to a subnet scan, paints the frame, and sleeps until the next refresh;
+a tap during the awake window switches orientation, and `enable-boot` makes it start on
+its own after a restart.
+
+The server hostname is the only thing the two sides share; nothing in the code assumes a
+particular machine name.
 
 ## 📖 Usage
 
@@ -74,8 +106,8 @@ uv run paperwhite version
 
 The service reads `PAPERWHITE_CONFIG`, `PAPERWHITE_PROVIDER`, `PAPERWHITE_HOST`, and
 `PAPERWHITE_PORT` from the environment (flags override them); `.env.example` documents them
-and the systemd unit loads a git-ignored `.env`. The Kindle client will be told
-the server's hostname at install time; nothing assumes a particular machine name.
+and the systemd unit loads a git-ignored `.env`. The Kindle client is told the server's
+hostname at install time; nothing assumes a particular machine name.
 
 `config.example.yaml` documents every option. Copy it to `config.yaml` (git-ignored):
 
@@ -121,8 +153,13 @@ src/paperwhite_weather/
 ├── service.py         # DashboardService (cache + per-minute frames) and the HTTP server
 └── cli.py             # `paperwhite render | gallery | serve | skins | providers | version`
 deploy/
+├── install.sh         # one-command setup of the unit on the always-on machine
 ├── systemd/           # user-level unit for the Raspberry Pi
 └── avahi/             # optional mDNS advertisement
+kindle/
+├── paperwhite.sh      # the client: discover, fetch, paint with eips, sleep, repeat
+├── install.sh         # copy the client to a USB-mounted Kindle
+└── extensions/        # KUAL menu: start, stop, one frame, toggle, status
 ```
 
 Deployment on the Pi is documented in [`docs/DEPLOY.md`](docs/DEPLOY.md).
@@ -149,7 +186,13 @@ INFO paperwhite_weather.render: Rendering skin 'minimal' on a 1448x1072 canvas
 Rendered skin 'minimal' (landscape, 1072x1448) from 'mock' data fetched at 2026-09-18 21:45 UTC -> dashboard.png
 
 $ uv run paperwhite skins
+big-clock
+forecast
+graphic
 minimal
+newspaper
+timeline
+weather-station
 
 $ uv run paperwhite version
 paperwhite-weather 0.1.0

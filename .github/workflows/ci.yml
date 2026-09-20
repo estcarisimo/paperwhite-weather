@@ -40,8 +40,8 @@ jobs:
       - name: bandit (static security scan of the package)
         run: uvx bandit -r src/paperwhite_weather -q
 
-      - name: ShellCheck (Kindle-side POSIX shell)
-        run: uvx --from shellcheck-py shellcheck -s sh kindle/paperwhite.sh kindle/install.sh kindle/extensions/paperwhite/bin/*.sh
+      - name: ShellCheck (POSIX shell: Kindle client and Pi installer)
+        run: uvx --from shellcheck-py shellcheck -s sh kindle/paperwhite.sh kindle/install.sh kindle/extensions/paperwhite/bin/*.sh deploy/install.sh
 
       - name: pip-audit (audits the locked dependency set)
         run: |

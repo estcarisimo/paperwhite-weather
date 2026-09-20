@@ -148,9 +148,11 @@ README. Refinement items above stay open and are where the project spends its ti
 
 Goal: someone else can do this with their Kindle in an evening.
 
-- [ ] README with photos, one-command Pi setup, documented Kindle setup.
-- [ ] `CITATION.cff` validated, `SECURITY.md` links verified, private vulnerability
-      reporting confirmed (see `docs/REPOSITORY_STATE.md`).
+- [ ] README with photos (pending: the maintainer's photographs of the device);
+      one-command Pi setup (`deploy/install.sh`) and documented Kindle setup done
+      2026-09-20.
+- [x] `CITATION.cff` validated, `SECURITY.md` links verified, private vulnerability
+      reporting confirmed on 2026-09-20 (see `docs/REPOSITORY_STATE.md`).
 - [ ] Release 0.1.0 on GitHub; PyPI only after the name is confirmed and Trusted
       Publishing is configured.
 
