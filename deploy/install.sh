@@ -14,15 +14,17 @@ unit_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 unit="paperwhite-weather.service"
 port="$(sed -n 's/^PAPERWHITE_PORT=//p' "$repo/.env" 2>/dev/null | tail -n 1)"
 port="${port:-8765}"
+host="$(sed -n 's/^PAPERWHITE_HOST=//p' "$repo/.env" 2>/dev/null | tail -n 1)"
+host="${host:-0.0.0.0}"
+# The health probe goes to loopback when the service listens on every interface.
+[ "$host" = "0.0.0.0" ] && host="127.0.0.1"
 
-command -v uv >/dev/null 2>&1 || {
-    echo "uv is not installed; see https://github.com/astral-sh/uv" >&2
-    exit 1
-}
-command -v systemctl >/dev/null 2>&1 || {
-    echo "systemctl not found; this script installs a systemd user unit" >&2
-    exit 1
-}
+for tool in uv systemctl curl; do
+    command -v "$tool" >/dev/null 2>&1 || {
+        echo "$tool is not installed; this script needs uv, systemctl, and curl" >&2
+        exit 1
+    }
+done
 
 cd "$repo"
 echo "==> uv sync"
@@ -53,9 +55,9 @@ if [ "$(loginctl show-user "$USER" -p Linger --value 2>/dev/null)" != "yes" ]; t
     echo "    Run: sudo loginctl enable-linger $USER"
 fi
 
-echo "==> waiting for /health on port $port"
+echo "==> waiting for /health on $host:$port"
 i=0
-until curl -sf "http://127.0.0.1:$port/health" >/dev/null 2>&1; do
+until curl -sf "http://$host:$port/health" >/dev/null 2>&1; do
     i=$((i + 1))
     if [ "$i" -ge 30 ]; then
         echo "the service did not answer within 30 s; see: journalctl --user -u $unit -e" >&2
@@ -63,6 +65,8 @@ until curl -sf "http://127.0.0.1:$port/health" >/dev/null 2>&1; do
     fi
     sleep 1
 done
-curl -s "http://127.0.0.1:$port/health"
+curl -s "http://$host:$port/health"
 echo
-echo "==> done. The Kindle reaches this machine as http://$(hostname).lan:$port/ (see kindle/README.md)."
+echo "==> done. Tell the Kindle client SERVER_HOST=$(hostname) (and SERVER_PORT=$port if you"
+echo "    changed it); it tries $(hostname).lan, .local, and the bare name, then scans the"
+echo "    subnet (see kindle/README.md)."
