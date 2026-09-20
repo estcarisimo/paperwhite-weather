@@ -63,7 +63,8 @@ def draw_timeline(
     now
         The moment to mark (timezone-aware).
     sun
-        Today's sun times; sunrise and sunset shade every day in the span.
+        Today's sun times; their sunrise and sunset times of day shade every day in the
+        span (the day-to-day drift is minutes, below the width of an hour).
     tz, time_format
         For the hour labels, as in :func:`paperwhite_weather.skins.base.format_clock`.
     scale
@@ -100,6 +101,8 @@ def draw_timeline(
         return plot_left + step * index
 
     def dark(moment: datetime) -> bool:
+        # Today's sunrise and sunset times of day stand in for every day in the span;
+        # the drift from one day to the next is a few minutes, below an hour's width.
         local = moment.astimezone(tz)
         sunrise = sun.sunrise.astimezone(tz).replace(
             year=local.year, month=local.month, day=local.day
@@ -199,12 +202,18 @@ def draw_timeline(
             draw.line(
                 [(x, bottom - label_h), (x, bottom - label_h + px(8))], fill=DARK_GRAY, width=px(2)
             )
+            # The value goes on the outside of the curve (above a crest or a level run,
+            # below a trough) with a white halo, so a steep segment never crosses it.
+            neighbors = [temperatures[j] for j in (k - 1, k + 1) if 0 <= j < count]
+            above = sum(neighbors) / len(neighbors) <= hour.temperature
             draw.text(
-                (x, y_of(hour.temperature) - px(16)),
+                (x, y_of(hour.temperature) + (-px(16) if above else px(16))),
                 format_temperature(hour.temperature),
                 font=value_font,
                 fill=BLACK,
-                anchor="mb",
+                anchor="mb" if above else "mt",
+                stroke_width=px(4),
+                stroke_fill=WHITE,
             )
         if local.hour % _LABEL_EVERY == 1 and k + 1 < count:
             cx = x_of(k + 1)

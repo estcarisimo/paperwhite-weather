@@ -120,3 +120,31 @@ def test_hours_from_midnight_starts_at_the_local_day() -> None:
     assert len(picked) == 24  # the series ends at 23:00 today
     assert picked[0].time == MIDNIGHT
     assert hours_from_midnight([], _at(16, 45), TZ, 25) == []
+
+
+@pytest.mark.behaviour
+def test_value_labels_sit_clear_of_a_steep_curve(sun: SunTimes) -> None:
+    """On a sawtooth series every labeled point has white between the curve and its label."""
+    hours = [
+        h.model_copy(update={"temperature": 50.0 + (20.0 if k % 6 < 3 else 0.0) + k % 3 * 6})
+        for k, h in enumerate(_hours())
+    ]
+    size = (944, 560)
+    image = _render(hours, _at(16, 45), sun, size)
+    temperatures = [h.temperature for h in hours]
+    lo, hi = min(temperatures), max(temperatures)
+    plot_left, step = 20 + 40, (944 - 40 - 30) / 24
+    curve_top, curve_bottom = 20 + 56 + 54, 20 + 560 - 44 - 90 - 70 - 30
+    for k in range(0, 25, 3):
+        x = round(plot_left + step * k)
+        y = round(curve_bottom - (temperatures[k] - lo) / (hi - lo) * (curve_bottom - curve_top))
+        neighbors = [temperatures[j] for j in (k - 1, k + 1) if 0 <= j < 25]
+        direction = -1 if sum(neighbors) / len(neighbors) <= temperatures[k] else 1
+        column = [image.getpixel((x, y + direction * d)) for d in range(0, 70)]
+        # Leaving the curve there must be a white run before the label's ink.
+        first_white = next(d for d, v in enumerate(column) if v == 255)
+        text_ink = next((d for d, v in enumerate(column) if d > first_white and v < 128), None)
+        assert text_ink is not None, f"no label found at hour {k}"
+        assert all(v == 255 for v in column[first_white : first_white + 2]), (
+            f"curve touches the label at hour {k}"
+        )
