@@ -3,7 +3,14 @@ from __future__ import annotations
 import pytest
 from PIL import Image, ImageDraw
 
-from paperwhite_weather.icons import draw_drop, draw_icon, draw_thermometer, draw_wind
+from paperwhite_weather.icons import (
+    draw_drop,
+    draw_icon,
+    draw_moon_phase,
+    draw_sun,
+    draw_thermometer,
+    draw_wind,
+)
 from paperwhite_weather.models import Condition
 
 
@@ -92,4 +99,39 @@ def test_metric_glyphs_stay_inside_their_box(glyph, size: int) -> None:  # type:
         assert image.crop(box).getextrema() == (255, 255), f"glyph spills outside {box}"
     tiny = Image.new("L", (10, 10), 255)
     glyph(ImageDraw.Draw(tiny), (0, 0, 6, 6))
+    assert tiny.getextrema() == (255, 255)
+
+
+@pytest.mark.parametrize("phase", [0.0, 0.12, 0.25, 0.38, 0.5, 0.62, 0.75, 0.88])
+@pytest.mark.parametrize("size", [12, 48, 200])
+def test_moon_phase_glyph_stays_inside_its_box(phase: float, size: int) -> None:
+    pad = 20
+    image = Image.new("L", (size + 2 * pad, size + 2 * pad), 255)
+    draw_moon_phase(ImageDraw.Draw(image), (pad, pad, pad + size, pad + size), phase)
+    assert image.getextrema()[0] < 255
+    for box in (
+        (0, 0, image.width, pad - 1),
+        (0, image.height - pad + 1, image.width, image.height),
+        (0, 0, pad - 1, image.height),
+        (image.width - pad + 1, 0, image.width, image.height),
+    ):
+        assert image.crop(box).getextrema() == (255, 255), f"moon spills outside {box}"
+
+
+def test_moon_phase_glyph_lights_up_toward_full_and_waxes_on_the_right() -> None:
+    def ink(phase: float) -> tuple[int, int]:
+        image = Image.new("L", (100, 100), 255)
+        draw_moon_phase(ImageDraw.Draw(image), (0, 0, 100, 100), phase)
+        left = image.crop((0, 0, 50, 100)).histogram()[0]
+        right = image.crop((50, 0, 100, 100)).histogram()[0]
+        return left, right
+
+    new, crescent, quarter, full = ink(0.0), ink(0.12), ink(0.25), ink(0.5)
+    assert sum(new) < sum(crescent) < sum(quarter) < sum(full)
+    assert crescent[1] > crescent[0] and quarter[1] > quarter[0]  # waxing: lit on the right
+    waning = ink(0.75)
+    assert waning[0] > waning[1]
+    tiny = Image.new("L", (10, 10), 255)
+    draw_moon_phase(ImageDraw.Draw(tiny), (0, 0, 6, 6), 0.5)
+    draw_sun(ImageDraw.Draw(tiny), (0, 0, 6, 6))
     assert tiny.getextrema() == (255, 255)

@@ -139,3 +139,19 @@ def test_probabilities_are_percentages(probability: float) -> None:
         CurrentConditions(
             temperature=1.0, condition=Condition.RAIN, precipitation_probability=probability
         )
+
+
+def test_uv_index_and_moon_phase_are_validated() -> None:
+    assert _snapshot(moon_phase=0.38).moon_phase == 0.38
+    assert _snapshot().moon_phase is None
+    with pytest.raises(ValidationError):
+        _snapshot(moon_phase=1.0)
+    with pytest.raises(ValidationError):
+        _snapshot(moon_phase=-0.1)
+    with pytest.raises(ValidationError):
+        CurrentConditions(temperature=1.0, condition=Condition.CLEAR, uv_index=-1.0)
+    with pytest.raises(ValidationError):
+        _day(0).model_copy(update={"uv_index_max": -0.5}).model_validate(
+            {**_day(0).model_dump(), "uv_index_max": -0.5}
+        )
+    assert _day(0).model_copy(update={"uv_index_max": 6.0}).uv_index_max == 6.0

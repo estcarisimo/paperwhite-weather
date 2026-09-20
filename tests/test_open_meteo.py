@@ -23,9 +23,9 @@ from paperwhite_weather.providers.open_meteo import (
     parse_forecast,
 )
 
-FIXTURE = Path(__file__).parent / "fixtures" / "open_meteo_chicago_2026-09-19.json"
+FIXTURE = Path(__file__).parent / "fixtures" / "open_meteo_chicago_2026-09-20.json"
 CHICAGO = Location(latitude=41.8781, longitude=-87.6298, timezone="America/Chicago")
-FETCHED = datetime(2026, 9, 19, 22, 3, tzinfo=timezone.utc)
+FETCHED = datetime(2026, 9, 20, 14, 1, tzinfo=timezone.utc)
 
 
 @pytest.fixture
@@ -55,24 +55,29 @@ def test_build_query_requests_every_field_in_the_configured_units() -> None:
 
 @pytest.mark.behaviour
 def test_parse_recorded_response(payload: dict[str, object]) -> None:
-    """Pins the normalization of a real response recorded on 2026-09-19 (metric units)."""
+    """Pins the normalization of a real response recorded on 2026-09-20 (metric units)."""
     snapshot = parse_forecast(payload, CHICAGO, Units(), fetched_at=FETCHED)
     assert snapshot.source == "open-meteo"
     assert snapshot.fetched_at == FETCHED
-    assert snapshot.current.temperature == 19.4
-    assert snapshot.current.feels_like == 21.7
-    assert snapshot.current.humidity_percent == 96.0
-    assert snapshot.current.wind_speed == 6.9
-    assert snapshot.current.condition is Condition.CLOUDY  # WMO 3
-    assert snapshot.current.precipitation_probability == 31.0
-    assert [day.date for day in snapshot.daily] == [date(2026, 9, 19 + i) for i in range(5)]
+    assert snapshot.current.temperature == 18.2
+    assert snapshot.current.feels_like == 17.8
+    assert snapshot.current.humidity_percent == 95.0
+    assert snapshot.current.wind_speed == 20.9
+    assert snapshot.current.condition is Condition.DRIZZLE  # WMO 53
+    assert snapshot.current.precipitation_probability == 70.0
+    assert snapshot.current.uv_index == 0.15
+    assert [day.date for day in snapshot.daily] == [date(2026, 9, 20 + i) for i in range(5)]
     assert [day.condition for day in snapshot.daily] == [
         Condition.RAIN,
-        Condition.RAIN,
-        Condition.RAIN,
-        Condition.CLOUDY,
         Condition.DRIZZLE,
+        Condition.CLOUDY,
+        Condition.CLOUDY,
+        Condition.CLOUDY,
     ]
+    assert [day.uv_index_max for day in snapshot.daily] == [0.7, 1.5, 5.5, 2.1, 5.4]
+    # 2026-09-20 is nine days after the new moon of 2026-09-11: a waxing crescent
+    # about a third of the way through the lunation.
+    assert snapshot.moon_phase is not None and 0.25 < snapshot.moon_phase < 0.35
     today = snapshot.today
     assert (today.temperature_low, today.temperature_high) == (
         payload["daily"]["temperature_2m_min"][0],  # type: ignore[index]
@@ -95,14 +100,13 @@ def test_parse_recorded_hourly(payload: dict[str, object]) -> None:
     snapshot = parse_forecast(payload, CHICAGO, Units(), fetched_at=FETCHED)
     assert len(snapshot.hourly) == 120  # 5 days x 24 hours
     first = snapshot.hourly[0]
-    assert first.time == datetime(2026, 9, 19, 0, 0, tzinfo=CHICAGO.tzinfo)
+    assert first.time == datetime(2026, 9, 20, 0, 0, tzinfo=CHICAGO.tzinfo)
     assert first.time.utcoffset() == timedelta(hours=-5)
-    assert first.temperature == 18.7
-    assert first.condition is Condition.CLEAR  # WMO 0
-    assert first.precipitation_probability == 5.0
-    assert first.wind_speed == 18.4
-    assert snapshot.hourly[1].condition is Condition.CLOUDY  # WMO 3
-    assert snapshot.hourly[-1].time == datetime(2026, 9, 23, 23, 0, tzinfo=CHICAGO.tzinfo)
+    assert first.temperature == 19.4
+    assert first.condition is Condition.CLOUDY  # WMO 3
+    assert first.precipitation_probability == 72.0
+    assert first.wind_speed == 5.8
+    assert snapshot.hourly[-1].time == datetime(2026, 9, 24, 23, 0, tzinfo=CHICAGO.tzinfo)
     assert all(a.time < b.time for a, b in pairwise(snapshot.hourly))
 
 
@@ -165,6 +169,7 @@ def test_every_documented_wmo_code_is_mapped() -> None:
         lambda p: p["hourly"]["time"].pop(),
         lambda p: p["hourly"]["time"].__setitem__(0, "2026-09-19T00:00+00:00"),
         lambda p: p["hourly"]["time"].__setitem__(0, "noon"),
+        lambda p: p["daily"]["uv_index_max"].pop(),
     ],
 )
 def test_malformed_responses_raise(
@@ -188,13 +193,17 @@ def test_optional_fields_may_be_missing(payload: dict[str, object]) -> None:
     for key in ("apparent_temperature", "relative_humidity_2m", "wind_speed_10m"):
         current.pop(key)
     current["precipitation_probability"] = None
+    current.pop("uv_index")
     payload["daily"]["precipitation_probability_max"][2] = None  # type: ignore[index]
+    payload["daily"].pop("uv_index_max")  # type: ignore[union-attr]
     snapshot = parse_forecast(payload, CHICAGO, Units(), fetched_at=FETCHED)
     assert snapshot.current.feels_like is None
     assert snapshot.current.humidity_percent is None
     assert snapshot.current.wind_speed is None
     assert snapshot.current.precipitation_probability is None
+    assert snapshot.current.uv_index is None
     assert snapshot.daily[2].precipitation_probability is None
+    assert all(day.uv_index_max is None for day in snapshot.daily)
 
 
 # --- HTTP layer against a local stub server -------------------------------------------------

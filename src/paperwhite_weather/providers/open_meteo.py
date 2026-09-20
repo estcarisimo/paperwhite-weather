@@ -20,7 +20,7 @@ from paperwhite_weather.models import (
     HourlyForecast,
     WeatherSnapshot,
 )
-from paperwhite_weather.sun import compute_sun_times
+from paperwhite_weather.sun import compute_moon_phase, compute_sun_times
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +35,14 @@ _CURRENT_FIELDS = (
     "wind_speed_10m",
     "weather_code",
     "precipitation_probability",
+    "uv_index",
 )
 _DAILY_FIELDS = (
     "weather_code",
     "temperature_2m_max",
     "temperature_2m_min",
     "precipitation_probability_max",
+    "uv_index_max",
 )
 _HOURLY_FIELDS = (
     "temperature_2m",
@@ -196,10 +198,13 @@ def parse_forecast(
         raise OpenMeteoError(f"unexpected Open-Meteo response shape: {exc!r}") from exc
     if not days or not (len(days) == len(codes) == len(highs) == len(lows) == len(probabilities)):
         raise OpenMeteoError("Open-Meteo daily arrays are empty or of unequal length")
+    uv_maxima = daily.get("uv_index_max") or [None] * len(days)
+    if len(uv_maxima) != len(days):
+        raise OpenMeteoError("Open-Meteo daily arrays are of unequal length")
 
     forecasts = []
-    rows = zip(days, codes, highs, lows, probabilities, strict=True)
-    for day, code, high, low, probability in rows:
+    rows = zip(days, codes, highs, lows, probabilities, uv_maxima, strict=True)
+    for day, code, high, low, probability, uv_max in rows:
         if high is None or low is None:
             raise OpenMeteoError(f"Open-Meteo has no temperature range for {day}")
         forecasts.append(
@@ -209,6 +214,7 @@ def parse_forecast(
                 temperature_low=float(low),
                 temperature_high=float(high),
                 precipitation_probability=_optional_float(probability),
+                uv_index_max=_optional_float(uv_max),
             )
         )
 
@@ -227,10 +233,12 @@ def parse_forecast(
             humidity_percent=_optional_float(current.get("relative_humidity_2m")),
             wind_speed=_optional_float(current.get("wind_speed_10m")),
             precipitation_probability=_optional_float(current.get("precipitation_probability")),
+            uv_index=_optional_float(current.get("uv_index")),
         ),
         daily=forecasts,
         hourly=_parse_hourly(payload, location),
         sun=compute_sun_times(location, days[0]),
+        moon_phase=compute_moon_phase(days[0]),
     )
 
 

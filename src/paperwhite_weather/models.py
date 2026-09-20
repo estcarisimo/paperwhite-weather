@@ -47,6 +47,7 @@ class CurrentConditions(BaseModel):
     humidity_percent: float | None = Field(default=None, ge=0.0, le=100.0)
     wind_speed: float | None = Field(default=None, ge=0.0)
     precipitation_probability: float | None = Field(default=None, ge=0.0, le=100.0)
+    uv_index: float | None = Field(default=None, ge=0.0)
 
 
 class DailyForecast(BaseModel):
@@ -59,6 +60,7 @@ class DailyForecast(BaseModel):
     temperature_low: float
     temperature_high: float
     precipitation_probability: float | None = Field(default=None, ge=0.0, le=100.0)
+    uv_index_max: float | None = Field(default=None, ge=0.0)
 
     @model_validator(mode="after")
     def _low_not_above_high(self) -> DailyForecast:
@@ -118,6 +120,9 @@ class WeatherSnapshot(BaseModel):
     hourly
         Hour-by-hour forecast in ascending order, typically from local midnight of today;
         empty when the provider has none.
+    moon_phase
+        Where today falls in the lunation as a fraction: ``0`` new moon, ``0.25`` first
+        quarter, ``0.5`` full, ``0.75`` last quarter; ``None`` when unknown.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -130,6 +135,7 @@ class WeatherSnapshot(BaseModel):
     daily: list[DailyForecast] = Field(min_length=1)
     hourly: list[HourlyForecast] = Field(default_factory=list)
     sun: SunTimes
+    moon_phase: float | None = Field(default=None, ge=0.0, lt=1.0)
 
     @field_validator("fetched_at")
     @classmethod
