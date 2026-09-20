@@ -59,6 +59,13 @@ def test_mock_hourly_covers_every_day_within_its_range() -> None:
     assert max(h.temperature for h in afternoon) == snapshot.daily[1].temperature_high
 
 
+def test_mock_carries_uv_index_and_moon_phase() -> None:
+    snapshot = MockProvider(now=FIXED_NOW).fetch(LOCATION, Units())
+    assert snapshot.current.uv_index == 4.0
+    assert [day.uv_index_max for day in snapshot.daily] == [6.0, 2.0, 3.0, 4.0, 7.0]
+    assert snapshot.moon_phase == 0.38
+
+
 def test_mock_rejects_naive_now() -> None:
     with pytest.raises(ValueError, match="timezone-aware"):
         MockProvider(now=datetime(2026, 9, 18, 21, 45))

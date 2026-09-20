@@ -17,19 +17,23 @@ from paperwhite_weather.models import (
 )
 from paperwhite_weather.units import celsius_to_fahrenheit, kmh_to_mph, kmh_to_ms
 
-# (condition, low °C, high °C, precipitation probability %) for today and the next days.
-_DAYS: tuple[tuple[Condition, float, float, float], ...] = (
-    (Condition.PARTLY_CLOUDY, 14.0, 24.0, 10.0),
-    (Condition.RAIN, 12.0, 19.0, 80.0),
-    (Condition.THUNDERSTORM, 13.0, 21.0, 65.0),
-    (Condition.CLOUDY, 11.0, 18.0, 30.0),
-    (Condition.CLEAR, 9.0, 22.0, 0.0),
+# (condition, low °C, high °C, precipitation probability %, UV index max) for today and
+# the next days.
+_DAYS: tuple[tuple[Condition, float, float, float, float], ...] = (
+    (Condition.PARTLY_CLOUDY, 14.0, 24.0, 10.0, 6.0),
+    (Condition.RAIN, 12.0, 19.0, 80.0, 2.0),
+    (Condition.THUNDERSTORM, 13.0, 21.0, 65.0, 3.0),
+    (Condition.CLOUDY, 11.0, 18.0, 30.0, 4.0),
+    (Condition.CLEAR, 9.0, 22.0, 0.0, 7.0),
 )
 
 _CURRENT_TEMPERATURE_C = 21.0
 _CURRENT_FEELS_LIKE_C = 20.0
 _CURRENT_WIND_KMH = 14.0
 _CURRENT_HUMIDITY = 58.0
+_CURRENT_UV_INDEX = 4.0
+#: A fixed waxing gibbous moon, so the glyph shows a shape between quarter and full.
+_MOON_PHASE = 0.38
 
 #: Shape of the mock day: the temperature wave peaks at this local hour (and bottoms out
 #: twelve hours earlier).
@@ -76,8 +80,9 @@ class MockProvider:
                 temperature_low=convert(low),
                 temperature_high=convert(high),
                 precipitation_probability=probability,
+                uv_index_max=uv_max,
             )
-            for offset, (condition, low, high, probability) in enumerate(_DAYS)
+            for offset, (condition, low, high, probability, uv_max) in enumerate(_DAYS)
         ]
 
         def at(clock: time) -> datetime:
@@ -101,6 +106,7 @@ class MockProvider:
                 humidity_percent=_CURRENT_HUMIDITY,
                 wind_speed=wind(_CURRENT_WIND_KMH),
                 precipitation_probability=daily[0].precipitation_probability,
+                uv_index=_CURRENT_UV_INDEX,
             ),
             daily=daily,
             hourly=hourly,
@@ -110,6 +116,7 @@ class MockProvider:
                 sunset=at(_SUNSET),
                 civil_dusk=at(_CIVIL_DUSK),
             ),
+            moon_phase=_MOON_PHASE,
         )
 
 

@@ -16,7 +16,8 @@ _FORECAST_DAYS = 4
 
 
 class WeatherStationSkin:
-    """Clock, current conditions, the metrics as glyphs, the sun arc, and the forecast."""
+    """Clock, current conditions, every metric as a glyph (UV and the moon included), the
+    sun arc, and the forecast."""
 
     name: ClassVar[str] = "weather-station"
 
@@ -48,7 +49,9 @@ class WeatherStationSkin:
             right_x = m + left_w + gutter
             right_w = c.width - m - right_x
             self._current(c, m, y, left_w)
-            gy = c.metrics_strip((right_x, y + c.px(10), right_x + right_w, y + c.px(200)))
+            gy = c.metrics_strip(
+                (right_x, y + c.px(10), right_x + right_w, y + c.px(300)), extras=True
+            )
             ay = c.sun_arc((m, self._current_height(c, y), m + left_w, y + c.px(430)))
             y2 = max(ay, gy) + c.px(30)
             y2 = c.rule(m, y2, w, LIGHT_GRAY, 2) + c.px(16)
@@ -56,7 +59,7 @@ class WeatherStationSkin:
         else:
             self._current(c, m, y, w)
             y = self._current_height(c, y) + c.px(20)
-            y = c.metrics_strip((m, y, c.width - m, y + c.px(200))) + c.px(30)
+            y = c.metrics_strip((m, y, c.width - m, y + c.px(300)), extras=True) + c.px(30)
             y = c.sun_arc((m, y, c.width - m, y + c.px(270))) + c.px(30)
             y = c.rule(m, y, w, LIGHT_GRAY, 2) + c.px(16)
             self._forecast(c, m, y, w)

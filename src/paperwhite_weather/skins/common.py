@@ -13,7 +13,14 @@ from PIL import Image, ImageDraw
 
 from paperwhite_weather.config import Settings
 from paperwhite_weather.fonts import Weight, load_font
-from paperwhite_weather.icons import draw_drop, draw_icon, draw_thermometer, draw_wind
+from paperwhite_weather.icons import (
+    draw_drop,
+    draw_icon,
+    draw_moon_phase,
+    draw_sun,
+    draw_thermometer,
+    draw_wind,
+)
 from paperwhite_weather.models import Condition, DailyForecast, WeatherSnapshot
 from paperwhite_weather.skins.band_chart import draw_band_chart
 from paperwhite_weather.skins.base import (
@@ -31,6 +38,7 @@ from paperwhite_weather.skins.temperature_bars import (
     draw_temperature_bars,
     rows_for_days,
 )
+from paperwhite_weather.sun import moon_illumination
 
 DESIGN_PORTRAIT = (1072, 1448)
 DESIGN_LANDSCAPE = (1448, 1072)
@@ -169,22 +177,26 @@ class Canvas:
         )
         return bottom
 
-    def metrics_strip(self, box: tuple[float, float, float, float], compact: bool = False) -> int:
+    def metrics_strip(
+        self, box: tuple[float, float, float, float], compact: bool = False, extras: bool = False
+    ) -> int:
         """The optional current metrics as glyph + value cells; returns the bottom.
 
-        Cells share the width; ``compact`` drops the labels and wraps two per row.
+        Cells share the width, at most four per row (three when ``extras`` add the UV
+        index and the moon); ``compact`` drops the labels and wraps two per row.
         """
         left, top, right, _ = box
-        cells = self.metrics()
+        cells = self.metrics(extras=extras)
         if not cells:
             return round(top)
-        per_row = 2 if compact else len(cells)
+        per_row = 2 if compact else min(len(cells), 3 if len(cells) > 4 else 4)
         cell_w = (right - left) / per_row
         size = self.px(48 if compact else 64)
         row_h = size + self.px(18 if compact else 62)
         glyphs = {
             "Feels like": draw_thermometer,
             "Wind": draw_wind,
+            "UV": draw_sun,
         }
         levels = {
             "Humidity": self.snapshot.current.humidity_percent,
@@ -196,6 +208,8 @@ class Canvas:
             glyph_box = (x, y, x + size, y + size)
             if label in glyphs:
                 glyphs[label](self.draw, glyph_box, BLACK)
+            elif label == "Moon":
+                draw_moon_phase(self.draw, glyph_box, self.snapshot.moon_phase or 0.0, BLACK)
             else:
                 level = levels.get(label)
                 draw_drop(self.draw, glyph_box, None if level is None else level / 100, BLACK)
@@ -336,8 +350,12 @@ class Canvas:
             anchor="rd",
         )
 
-    def metrics(self) -> list[tuple[str, str]]:
-        """Optional current-conditions values that are present, as (label, value)."""
+    def metrics(self, extras: bool = False) -> list[tuple[str, str]]:
+        """Optional current-conditions values that are present, as (label, value).
+
+        With ``extras``, the UV index and the moon's illumination follow the four
+        weather metrics.
+        """
         current = self.snapshot.current
         units = self.snapshot.units
         wind_unit = {"kmh": "km/h", "mph": "mph", "ms": "m/s"}[units.wind]
@@ -350,4 +368,10 @@ class Canvas:
             rows.append(("Wind", f"{round(current.wind_speed)} {wind_unit}"))
         if current.precipitation_probability is not None:
             rows.append(("Precipitation", f"{round(current.precipitation_probability)}%"))
+        if extras:
+            if current.uv_index is not None:
+                rows.append(("UV", f"{round(current.uv_index)}"))
+            if self.snapshot.moon_phase is not None:
+                lit = moon_illumination(self.snapshot.moon_phase)
+                rows.append(("Moon", f"{round(lit * 100)}%"))
         return rows

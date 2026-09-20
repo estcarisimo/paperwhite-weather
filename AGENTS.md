@@ -30,8 +30,8 @@ first upload.
 ```
 src/paperwhite_weather/
   config.py         Pydantic settings: Location, Units, Display, Settings; load_settings(path)
-  models.py         WeatherSnapshot, CurrentConditions, DailyForecast, HourlyForecast, SunTimes,
-                    Condition
+  models.py         WeatherSnapshot (daily, hourly, sun, moon_phase), CurrentConditions,
+                    DailyForecast, HourlyForecast, SunTimes, Condition
   units.py          celsius_to_fahrenheit, kmh_to_mph, kmh_to_ms
   fonts.py          load_font(weight, size): "regular"/"medium"/"bold" (Inter), "display"
                     (Oswald Medium, condensed numerals), "serif"/"serif-bold" (DejaVu Serif);
@@ -39,8 +39,10 @@ src/paperwhite_weather/
   icons.py          draw_icon(draw, condition, box, night): monochrome vector icons, one per
                     Condition, moon variants for clear and partly cloudy at night;
                     draw_drop(draw, box, level): a drop filled to a fraction; draw_wind,
-                    draw_thermometer: metric glyphs; Glyph helper
-  sun.py            compute_sun_times(location, day) -> SunTimes via astral (civil twilight)
+                    draw_thermometer, draw_sun, draw_moon_phase(draw, box, phase): metric
+                    glyphs; Glyph helper
+  sun.py            compute_sun_times(location, day) -> SunTimes via astral (civil twilight);
+                    compute_moon_phase(day), moon_illumination, moon_phase_name
   providers/        base.py (WeatherProvider protocol), mock.py (fixture data),
                     open_meteo.py (live: build_query, parse_forecast, WMO_CONDITIONS,
                     OpenMeteoError), registry in __init__.py: get_provider(name),

@@ -93,10 +93,15 @@ class Glyph:
             self.draw.ellipse([x - r, y - r, x + r, y + r], fill=fill)
 
     def sun(
-        self, x: float = 0.0, y: float = 0.0, r: float = 0.40, skip: tuple[int, ...] = ()
+        self,
+        x: float = 0.0,
+        y: float = 0.0,
+        r: float = 0.40,
+        skip: tuple[int, ...] = (),
+        fill: int = BLACK,
     ) -> None:
         """A disc with eight round rays; ``skip`` drops rays by index (0 = right, clockwise)."""
-        self.dot(x, y, r)
+        self.dot(x, y, r, fill)
         for k in range(8):
             if k in skip:
                 continue
@@ -106,6 +111,7 @@ class Glyph:
                 y + math.sin(a) * (r + 0.20),
                 x + math.cos(a) * (r + 0.40),
                 y + math.sin(a) * (r + 0.40),
+                fill,
             )
 
     def moon(self, x: float = 0.0, y: float = 0.0, r: float = 0.55) -> None:
@@ -348,3 +354,53 @@ def draw_thermometer(
     g.stroke_line(0.0, -0.55, 0.0, 0.25, WHITE, narrow)
     g.dot(0.0, 0.5, 0.32, ink)
     g.stroke_line(0.0, -0.2, 0.0, 0.3, ink, narrow)
+
+
+def draw_sun(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], ink: int = BLACK) -> None:
+    """The sun with its rays, the glyph for the UV index."""
+    left, top, right, bottom = box
+    size = min(right - left, bottom - top)
+    if size < 8:
+        return
+    g = Glyph(draw, left + (right - left) / 2, top + (bottom - top) / 2, size)
+    g.sun(0.0, 0.0, 0.34, fill=ink)
+
+
+def draw_moon_phase(
+    draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], phase: float, ink: int = BLACK
+) -> None:
+    """The moon as seen from the northern hemisphere: lit part in ``ink``, dark part white.
+
+    Parameters
+    ----------
+    draw
+        Drawing context of an ``"L"`` image.
+    box
+        Target area; the disc is centered and scaled to the shorter side.
+    phase
+        Fraction of the lunation, ``0`` new, ``0.5`` full (see
+        :func:`paperwhite_weather.sun.compute_moon_phase`). A waxing moon is lit on the
+        right, a waning one on the left.
+    ink
+        Gray level of the lit part and the outline.
+    """
+    left, top, right, bottom = box
+    size = min(right - left, bottom - top)
+    if size < 8:
+        return
+    cx, cy = left + (right - left) / 2, top + (bottom - top) / 2
+    r = size * 0.42
+    stroke = max(2, round(size * 0.07))
+    disc = (cx - r, cy - r, cx + r, cy + r)
+    draw.ellipse(disc, fill=ink)
+    # The dark side: a half disc, then the terminator as a half-ellipse that either
+    # widens the dark part (crescent) or gives some of it back (gibbous).
+    waxing = phase < 0.5
+    dark_start, dark_end = (90, 270) if waxing else (270, 90)  # left half when waxing
+    draw.chord(disc, dark_start, dark_end, fill=WHITE)
+    terminator = math.cos(2 * math.pi * phase) * r  # +r new, 0 quarter, -r full
+    half_width = abs(terminator)
+    if half_width > 0.5:
+        ellipse = (cx - half_width, cy - r, cx + half_width, cy + r)
+        draw.ellipse(ellipse, fill=WHITE if terminator > 0 else ink)
+    draw.ellipse(disc, outline=ink, width=stroke)

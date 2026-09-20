@@ -17,6 +17,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Tested on a recorded response and a local stub server, never against the live API.
 - Civil dawn/dusk and sunrise/sunset computed locally with `astral`, pinned to a US Naval
   Observatory table.
+- UV index (current and daily maximum, from Open-Meteo) and the moon's phase (computed
+  locally with `astral`, pinned to the 2026-08-12 eclipse) in the data model; the
+  `weather-station` skin shows them as two more metric cells: a sun with the index and
+  the moon drawn at its phase with the lit fraction. The mock provider carries fixed
+  values; the recorded Open-Meteo fixture was refreshed (2026-09-20) with the UV fields.
 - Hourly forecast in the data model (`HourlyForecast`: temperature, condition,
   precipitation probability, wind) from local midnight of today, five days long; the
   `open-meteo` provider requests it and the `mock` provider synthesizes a plausible day.

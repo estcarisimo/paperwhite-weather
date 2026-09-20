@@ -5,7 +5,12 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from paperwhite_weather.config import Location
-from paperwhite_weather.sun import compute_sun_times
+from paperwhite_weather.sun import (
+    compute_moon_phase,
+    compute_sun_times,
+    moon_illumination,
+    moon_phase_name,
+)
 
 CHICAGO = Location(latitude=41.8781, longitude=-87.6298, timezone="America/Chicago")
 
@@ -44,3 +49,30 @@ def test_polar_night_raises() -> None:
     svalbard = Location(latitude=78.2, longitude=15.6, timezone="Arctic/Longyearbyen")
     with pytest.raises(ValueError):
         compute_sun_times(svalbard, date(2026, 12, 21))
+
+
+@pytest.mark.math
+def test_moon_phase_pins_to_the_2026_eclipse_and_the_following_full_moon() -> None:
+    """The total solar eclipse of 2026-08-12 is a new moon; 2026-09-26 is a full moon."""
+    eclipse = compute_moon_phase(date(2026, 8, 12))
+    assert eclipse > 0.96 or eclipse < 0.04
+    assert abs(compute_moon_phase(date(2026, 9, 26)) - 0.5) < 0.04
+    for day in range(1, 31):
+        assert 0.0 <= compute_moon_phase(date(2026, 9, day)) < 1.0
+
+
+def test_moon_illumination_and_names() -> None:
+    assert moon_illumination(0.0) == 0.0
+    assert abs(moon_illumination(0.25) - 0.5) < 1e-9
+    assert abs(moon_illumination(0.5) - 1.0) < 1e-9
+    assert [moon_phase_name(p) for p in (0.0, 0.12, 0.25, 0.38, 0.5, 0.62, 0.75, 0.88, 0.99)] == [
+        "New moon",
+        "Waxing crescent",
+        "First quarter",
+        "Waxing gibbous",
+        "Full moon",
+        "Waning gibbous",
+        "Last quarter",
+        "Waning crescent",
+        "New moon",
+    ]
