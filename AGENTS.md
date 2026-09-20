@@ -167,8 +167,8 @@ uv build                                    # sdist + wheel via uv_build
 - Open-Meteo returns local-time strings without an offset (`2026-09-18T06:33`); the
   daily `time` values are used as dates, the hourly ones are made aware with the
   location's `tzinfo` in `_parse_hourly`, and sun times come from `astral`, so no naive
-  datetime ever reaches the model. Hours whose temperature is `null` are dropped. WMO codes not in `WMO_CONDITIONS` map to `Condition.UNKNOWN`
-  (shown as a dash), never raise.
+  datetime ever reaches the model. Hours whose temperature is `null` are dropped. WMO
+  codes not in `WMO_CONDITIONS` map to `Condition.UNKNOWN` (shown as a dash), never raise.
 - `render_dashboard` verifies the skin's output size and raises; do not catch that.
 - The existing Kindle dashboard projects listed in `README.md` are prior art to study,
   not code to copy. Any reuse is an explicit decision recorded in the PR after checking

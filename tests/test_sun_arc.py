@@ -106,13 +106,14 @@ def test_narrow_box_keeps_sunrise_and_sunset_apart(sun: SunTimes) -> None:
 @pytest.mark.behaviour
 @pytest.mark.parametrize("size", [(560, 170), (430, 220), (635, 160), (567, 300)])
 @pytest.mark.parametrize(
-    "offset", [timedelta(minutes=1), timedelta(minutes=5), timedelta(minutes=25)]
+    "offset",
+    [timedelta(0), timedelta(minutes=1), timedelta(minutes=5), timedelta(minutes=25)],
 )
 def test_moon_stays_clear_of_the_labels_at_the_edges_of_the_night(
     sun: SunTimes, size: tuple[int, int], offset: timedelta
 ) -> None:
-    """Just after dusk and just before dawn the moon sits near an end of the arc; a white
-    band separates it from the label row, so it never touches the sunrise or sunset time."""
+    """Just after dusk and just before dawn the moon sits near an end of the arc, and at the
+    exact instant the sun disc does; a white band separates either from the label row."""
     for moment in (sun.civil_dusk + offset, sun.civil_dawn - offset):
         image = _render(sun, moment, size, 1.0)
         label_top = 20 + size[1] - (sun_arc._LABEL_SIZE + 8) + 4

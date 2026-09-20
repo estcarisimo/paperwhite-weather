@@ -316,8 +316,7 @@ def _drop_tangents(
 def _drop_shape(
     draw: ImageDraw.ImageDraw, cx: float, cy: float, radius: float, tip_y: float, fill: int
 ) -> None:
-    if radius <= 0 or tip_y >= cy - radius:
-        return
+    """A filled drop: a disc and the triangle to the tip above it (``tip_y < cy - radius``)."""
     p1, p2 = _drop_tangents(cx, cy, radius, tip_y)
     draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=fill)
     draw.polygon([(cx, tip_y), p1, p2], fill=fill)
