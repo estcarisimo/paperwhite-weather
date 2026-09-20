@@ -366,7 +366,7 @@ def _skins_page(service: DashboardService) -> bytes:
     following = _after(current)
     buttons = "\n".join(
         f'<form method="post" action="/skin"><button name="name" value="{html.escape(name)}"'
-        f"{' class=current' if name == current else ''}>{html.escape(name)}</button></form>"
+        f'{" class=\"current\"" if name == current else ""}>{html.escape(name)}</button></form>'
         for name in available_skins()
     )
     page = f"""<!doctype html>
@@ -383,7 +383,7 @@ button.current{{background:#111;color:#fff}} button.next{{border-style:dashed}}
 </style></head><body>
 <h1>Paperwhite Weather</h1>
 <p>Skin now: <strong>{html.escape(current)}</strong>. The Kindle shows the new one at its
-next refresh; a tap on the panel fetches it right away.</p>
+next refresh, or right away after a tap on the panel (which also flips the orientation).</p>
 <img src="/dashboard/landscape.png" alt="the current frame, landscape">
 {buttons}
 <form method="post" action="/skin"><button class="next" name="name"
