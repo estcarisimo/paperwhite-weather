@@ -14,9 +14,10 @@ release line receives fixes.
 Please **do not open a public issue** for security problems.
 
 Use GitHub's private reporting:
-[Report a vulnerability](https://github.com/estcarisimo/paperwhite-weather/security/advisories/new).
-If that page is unavailable to you, email el.murdo@gmail.com with "paperwhite-weather
-security" in the subject.
+[Report a vulnerability](https://github.com/estcarisimo/paperwhite-weather/security/advisories/new)
+(it needs a GitHub account). If you cannot use it, open an issue that says only that you
+have a security report and how the maintainer can reach you privately; keep the details
+out of the issue.
 
 Include a description of the issue, reproduction steps (a minimal configuration file and
 the command that triggers it, with your coordinates removed), and the version and

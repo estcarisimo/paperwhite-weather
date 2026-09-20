@@ -153,8 +153,8 @@ Goal: someone else can do this with their Kindle in an evening.
       2026-09-20.
 - [x] `CITATION.cff` validated, `SECURITY.md` links verified, private vulnerability
       reporting confirmed on 2026-09-20 (see `docs/REPOSITORY_STATE.md`).
-- [ ] Release 0.1.0 on GitHub; PyPI only after the name is confirmed and Trusted
-      Publishing is configured.
+- [ ] Release 0.1.0 on GitHub (tag and release notes). No PyPI or other package index,
+      by decision (2026-09-20).
 
 ## Parking lot
 

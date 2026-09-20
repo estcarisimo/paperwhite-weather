@@ -21,9 +21,11 @@ The target device is a **Kindle Paperwhite 3 (7th generation, 2015)** on firmwar
 verified on the actual device and what is still an assumption.
 
 The distribution is `paperwhite-weather`, the import package `paperwhite_weather`, the
-command `paperwhite`. It is **not** on PyPI yet (the name was free on 2026-09-18). Never
-write `pip install paperwhite-weather`; install from GitHub, and no PyPI badge until the
-first upload.
+command `paperwhite`. It is **not published to PyPI or any other package index, by
+decision (2026-09-20)**; it is installed from GitHub. Never write
+`pip install paperwhite-weather` and never add a PyPI badge. Never write the maintainer's
+email address anywhere: contact paths are GitHub-only (private vulnerability reporting,
+issues, the `@estcarisimo` handle).
 
 ## Layout
 
