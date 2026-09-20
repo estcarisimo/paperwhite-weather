@@ -175,8 +175,9 @@ The skins are in their second pass (September 2026), with the direction **fewer 
 more pictures**: Inter and Oswald typefaces, redrawn icons with night variants, the sun
 arc, temperature bars on a shared track, and the `graphic` skin's band chart are in;
 `minimal` is the quiet end of the range and `timeline` draws the day hour by hour from
-the hourly forecast. Still to come: layout passes over `weather-station`, `big-clock`,
-and `newspaper` (which stays text-first on purpose). The
+the hourly forecast; `weather-station`, `big-clock`, and `newspaper` (which stays
+text-first on purpose) had their layout pass last. Next is the maintainer's review of
+all seven on the panel. The
 full plan, with what is done and what is open, is in [`docs/ROADMAP.md`](docs/ROADMAP.md);
 ideas are welcome as issues.
 

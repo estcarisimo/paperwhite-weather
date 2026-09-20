@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import pytest
 from PIL import Image, ImageDraw
 
-from paperwhite_weather.config import Settings
+from paperwhite_weather.config import Orientation, Settings
 from paperwhite_weather.models import WeatherSnapshot
 from paperwhite_weather.render import EINK_GRAY_LEVELS, quantize_grayscale, render_dashboard
 from paperwhite_weather.skins import available_skins, get_skin
@@ -225,3 +225,23 @@ def test_minimal_skin_handles_a_single_day_forecast(
             only_today, settings.model_copy(update={"display": display}), FIXED_NOW, size
         )
         assert image.size == size
+
+
+@pytest.mark.behaviour
+@pytest.mark.parametrize("skin", available_skins())
+@pytest.mark.parametrize("orientation", ["landscape", "portrait"])
+def test_nothing_runs_into_the_footer(
+    snapshot: WeatherSnapshot, settings: Settings, skin: str, orientation: Orientation
+) -> None:
+    """A white strip separates the footer line from whatever a skin draws above it."""
+    display = settings.display.model_copy(update={"skin": skin, "orientation": orientation})
+    width, height = display.canvas_size
+    image = get_skin(skin).compose(
+        snapshot, settings.model_copy(update={"display": display}), FIXED_NOW, (width, height)
+    )
+    margin = round(0.06 * min(width, height))
+    design = (1448, 1072) if orientation == "landscape" else (1072, 1448)
+    scale = min(width / design[0], height / design[1])
+    footer_top = height - margin - round(28 * scale) - 6  # the footer is 28 design px tall
+    strip = image.crop((width // 2, footer_top - 8, width - margin, footer_top))
+    assert strip.getextrema() == (255, 255), f"{skin} {orientation} runs into the footer"

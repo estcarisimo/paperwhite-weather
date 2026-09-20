@@ -137,7 +137,8 @@ The first versions read well; the direction is **fewer words, more pictures**.
       scale (photo of the device), unify stroke weights, and consider distinct glyphs
       for showers versus steady rain and for night (clear night, partly cloudy night)
       once the model knows whether it is night.
-- [ ] Portrait layouts leave empty space at the bottom (`newspaper`, `weather-station`);
+- [x] Portrait layouts leave empty space at the bottom (`newspaper`, `weather-station`)
+      (2026-09-20: the layout pass fills them);
       either grow the forecast or add the sun graphic there.
 
 Done: every skin renders both orientations from the mock provider and is pictured in the

@@ -187,7 +187,17 @@ def draw_timeline(
             DARK_GRAY,
         )
 
-    # Hour labels, ticks, values, icons, and midnight dividers.
+    # Midnight dividers first, so the labels and values drawn next sit on top of them.
+    for k, hour in enumerate(hours):
+        local = hour.time.astimezone(tz)
+        if local.hour == 0 and k and k < count - 3:
+            x = x_of(k)
+            draw.line([(x, top), (x, bottom - label_h)], fill=DARK_GRAY, width=px(2))
+            draw.text(
+                (x + px(8), top + px(60)), f"{local:%A}", font=day_font, fill=DARK_GRAY, anchor="la"
+            )
+
+    # Hour labels, ticks, values, and icons.
     for k, hour in enumerate(hours):
         local = hour.time.astimezone(tz)
         x = x_of(k)
@@ -222,11 +232,6 @@ def draw_timeline(
                 hour.condition,
                 (round(cx - icon / 2), top, round(cx + icon / 2), top + icon),
                 night=dark(hour.time),
-            )
-        if local.hour == 0 and k and k < count - 3:
-            draw.line([(x, top), (x, bottom - label_h)], fill=DARK_GRAY, width=px(2))
-            draw.text(
-                (x + px(8), top + px(60)), f"{local:%A}", font=day_font, fill=DARK_GRAY, anchor="la"
             )
 
     # The marker for now: a vertical line and a disc on the curve.

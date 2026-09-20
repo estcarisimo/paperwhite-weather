@@ -43,6 +43,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   sunset), a divider and the weekday at midnight. Portrait shows today midnight to
   midnight with tomorrow as one row; landscape runs into tomorrow's morning with
   tomorrow in the corner. Without hourly data the skin says so instead of a chart.
+- Layout pass over three skins: `weather-station` shows the metrics as glyph cells
+  (`Canvas.metrics_strip`) instead of a label grid and no longer repeats "Feels like"
+  under the temperature, which also uncrowds the arc in landscape; `big-clock` sits the
+  clock higher, gives the weather strip and the arc the space below, and writes the
+  range as "75° / 57°"; `newspaper` grows the "days ahead" icons to the space left in
+  portrait and puts each day's range and condition on their own lines.
 - Four more skins, each with portrait and landscape layouts: `newspaper` (serif front
   page), `weather-station` (metrics grid), `big-clock`, and `forecast`. Shared drawing
   helpers in `skins/common.py`; DejaVu Serif bundled alongside DejaVu Sans.

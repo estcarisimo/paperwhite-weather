@@ -148,3 +148,21 @@ def test_value_labels_sit_clear_of_a_steep_curve(sun: SunTimes) -> None:
         assert all(v == 255 for v in column[first_white : first_white + 2]), (
             f"curve touches the label at hour {k}"
         )
+
+
+@pytest.mark.behaviour
+def test_midnight_value_label_is_drawn_over_the_divider(sun: SunTimes) -> None:
+    """A 36-hour span has a midnight inside it; the value written there stays readable."""
+    hours = _hours(36)
+    image = _render(hours, _at(16, 45), sun, (1320, 520))
+    temperatures = [h.temperature for h in hours]
+    lo, hi = min(temperatures), max(temperatures)
+    plot_left, step = 20 + 40, (1320 - 40 - 30) / 35
+    curve_top, curve_bottom = 20 + 56 + 54, 20 + 520 - 44 - 90 - 70 - 30
+    x = round(plot_left + step * 24)
+    y = round(curve_bottom - (temperatures[24] - lo) / (hi - lo) * (curve_bottom - curve_top))
+    neighbors = [temperatures[23], temperatures[25]]
+    direction = -1 if sum(neighbors) / 2 <= temperatures[24] else 1
+    column = [image.getpixel((x, y + direction * d)) for d in range(0, 70)]
+    assert 255 in column, "the divider covers the whole column"
+    assert any(v == 0 for v in column[column.index(255) :]), "no black label ink over the divider"
