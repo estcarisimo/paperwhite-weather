@@ -29,7 +29,7 @@ class BigClockSkin:
         # Clock, as large as the width allows, vertically in the upper part.
         clock = c.clock()
         clock_size = 520 if c.landscape else 360
-        clock_y = c.height * (0.36 if c.landscape else 0.30)
+        clock_y = c.height * (0.32 if c.landscape else 0.25)
         used = c.text((c.width / 2, clock_y), clock, "bold", clock_size, anchor="mm", max_width=w)
         c.text(
             (c.width / 2, clock_y + used * 0.78),
@@ -43,7 +43,7 @@ class BigClockSkin:
 
         # Weather strip: icon, temperature, condition, range; the sun arc beside it in
         # landscape, under it in portrait.
-        strip_top = c.height * (0.68 if c.landscape else 0.58)
+        strip_top = c.height * (0.62 if c.landscape else 0.50)
         c.rule(m, strip_top, w, LIGHT_GRAY, 2)
         icon_size = c.px(190)
         icon_top = strip_top + c.px(40)
@@ -68,18 +68,19 @@ class BigClockSkin:
         )
         c.text(
             (x2, icon_top + c.px(80)),
-            c.high_low(today),
+            c.range_text(today),
             "regular",
             44,
             fill=DARK_GRAY,
             anchor="la",
             max_width=text_right - x2,
         )
+        arc_bottom = c.height - m - c.px(50)
         if c.landscape:
             arc_left = c.width - m - c.px(420)
-            c.sun_arc((arc_left, strip_top + c.px(20), c.width - m, strip_top + c.px(235)))
+            c.sun_arc((arc_left, strip_top + c.px(10), c.width - m, arc_bottom))
         else:
-            arc_top = icon_top + max(icon_size, temp_size) + c.px(24)
-            c.sun_arc((m, arc_top, c.width - m, arc_top + c.px(210)))
+            arc_top = icon_top + max(icon_size, temp_size) + c.px(40)
+            c.sun_arc((m, arc_top, c.width - m, arc_bottom))
         c.footer()
         return c.image

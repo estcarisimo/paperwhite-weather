@@ -49,7 +49,7 @@ class NewspaperSkin:
         # Lead story: text column on the left, the icon on the right.
         current = snapshot.current
         today = snapshot.today
-        icon = c.px(280 if c.landscape else 240)
+        icon = c.px(280 if c.landscape else 200)
         text_w = w - icon - c.px(40)
         lead_top = y
         headline = f"{c.condition_label(current.condition)}, {c.temperature(current.temperature)}"
@@ -91,19 +91,28 @@ class NewspaperSkin:
         days = snapshot.daily[1 : _FORECAST_DAYS + 1]
         if days:
             available = c.height - m - c.px(50) - y  # leave room for the footer
-            small = max(c.px(60), min(c.px(120), available - c.px(110)))
+            small = max(c.px(60), min(c.px(230), available - c.px(130)))
             column = w / len(days)
             for k, day in enumerate(days):
                 x = m + column * k
                 c.text(
-                    (x, y), f"{day.date:%A}", "serif-bold", 34, anchor="la", max_width=column * 0.95
+                    (x, y), f"{day.date:%A}", "serif-bold", 36, anchor="la", max_width=column * 0.95
                 )
-                c.icon(day.condition, (x, y + c.px(46), x + small, y + c.px(46) + small))
+                c.icon(day.condition, (x, y + c.px(50), x + small, y + c.px(50) + small))
+                line_y = y + c.px(50) + small + c.px(14)
                 c.text(
-                    (x, y + c.px(46) + small + c.px(10)),
-                    f"{c.range_text(day)}  {c.condition_label(day.condition)}",
+                    (x, line_y),
+                    c.range_text(day),
                     "serif",
-                    30,
+                    34,
+                    anchor="la",
+                    max_width=column * 0.95,
+                )
+                c.text(
+                    (x, line_y + c.px(46)),
+                    c.condition_label(day.condition),
+                    "serif",
+                    32,
                     anchor="la",
                     max_width=column * 0.95,
                 )

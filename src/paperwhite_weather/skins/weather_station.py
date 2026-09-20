@@ -16,7 +16,7 @@ _FORECAST_DAYS = 4
 
 
 class WeatherStationSkin:
-    """Clock, current conditions, a metrics grid, the sun arc, and the forecast."""
+    """Clock, current conditions, the metrics as glyphs, the sun arc, and the forecast."""
 
     name: ClassVar[str] = "weather-station"
 
@@ -48,15 +48,15 @@ class WeatherStationSkin:
             right_x = m + left_w + gutter
             right_w = c.width - m - right_x
             self._current(c, m, y, left_w)
-            gy = self._grid(c, right_x, y, right_w)
-            ay = c.sun_arc((m, self._current_height(c, y), m + left_w, y + c.px(420)))
+            gy = c.metrics_strip((right_x, y + c.px(10), right_x + right_w, y + c.px(200)))
+            ay = c.sun_arc((m, self._current_height(c, y), m + left_w, y + c.px(430)))
             y2 = max(ay, gy) + c.px(30)
             y2 = c.rule(m, y2, w, LIGHT_GRAY, 2) + c.px(16)
             self._forecast(c, m, y2, w)
         else:
             self._current(c, m, y, w)
             y = self._current_height(c, y) + c.px(20)
-            y = self._grid(c, m, y, w) + c.px(30)
+            y = c.metrics_strip((m, y, c.width - m, y + c.px(200))) + c.px(30)
             y = c.sun_arc((m, y, c.width - m, y + c.px(270))) + c.px(30)
             y = c.rule(m, y, w, LIGHT_GRAY, 2) + c.px(16)
             self._forecast(c, m, y, w)
@@ -81,32 +81,9 @@ class WeatherStationSkin:
             anchor="la",
             max_width=width - icon - c.px(30),
         )
-        c.text(
-            (tx, y + c.px(205)),
-            c.feels_like_text(),
-            "regular",
-            40,
-            fill=DARK_GRAY,
-            anchor="la",
-            max_width=width - icon - c.px(30),
-        )
 
     def _current_height(self, c: Canvas, y: int) -> int:
-        return y + c.px(260)
-
-    def _grid(self, c: Canvas, x: int, y: int, width: int) -> int:
-        """Two columns of label/value cells with the optional metrics. Returns the bottom y."""
-        cells = c.metrics()
-        columns = 2
-        cell_w = width / columns
-        cell_h = c.px(96)
-        for k, (label, value) in enumerate(cells):
-            cx = x + cell_w * (k % columns)
-            cy = y + cell_h * (k // columns)
-            c.text((cx, cy), label, "regular", 30, fill=DARK_GRAY, anchor="la")
-            c.text((cx, cy + c.px(34)), value, "bold", 46, anchor="la", max_width=cell_w * 0.95)
-        rows = (len(cells) + columns - 1) // columns
-        return round(y + cell_h * rows)
+        return y + c.px(215)
 
     def _forecast(self, c: Canvas, x: int, y: int, width: int) -> None:
         """Today and the next days as temperature bars on one scale, down to the footer."""
