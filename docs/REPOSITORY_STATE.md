@@ -61,6 +61,7 @@ report, on purpose. No email address appears in the repository; contact paths ar
 | --- | --- | --- |
 | `paperwhite-weather` on PyPI | not registered (free) | `curl -s -o /dev/null -w "%{http_code}" https://pypi.org/pypi/paperwhite-weather/json` → 404 |
 | `paperwhite-weather` on TestPyPI | not registered (free) | same against `test.pypi.org` → 404 |
+| GitHub release | `v0.1.0` published 2026-09-20, marked latest (`gh release view v0.1.0`) | https://github.com/estcarisimo/paperwhite-weather/releases/tag/v0.1.0 |
 | Publication | **none, by decision (2026-09-20)**: the project is installed from GitHub and is not published to PyPI or any other package index; no Trusted Publishing | maintainer's decision |
 
 ## Re-verified on 2026-09-20 (Sprint 5)
