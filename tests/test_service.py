@@ -241,6 +241,35 @@ def test_unwritable_state_dir_does_not_break_switching(
     assert "Could not persist the skin" in caplog.text
 
 
+def test_persist_thread_survives_an_unexpected_error(
+    settings: Settings,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """One bad write is logged; the next switch is still persisted."""
+    from paperwhite_weather import service as module
+
+    original = module.DashboardService._save_skin
+    calls = 0
+
+    def flaky_save(self: DashboardService, name: str) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("simulated bug, not an OSError")
+        original(self, name)
+
+    monkeypatch.setattr(module.DashboardService, "_save_skin", flaky_save)
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=tmp_path)
+    service.set_skin("graphic")
+    assert service.wait_persisted(60.0)
+    assert "Persisting skin 'graphic' failed" in caplog.text
+    service.set_skin("forecast")
+    assert service.wait_persisted(60.0)
+    assert (tmp_path / SKIN_STATE_FILE).read_text() == "forecast\n"
+
+
 def test_requests_never_wait_for_the_disk(
     settings: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

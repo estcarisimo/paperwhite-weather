@@ -179,7 +179,10 @@ class DashboardService:
                 self._pending_skin = None
                 self._persist_wake.clear()
             if name is not None:
-                self._save_skin(name)
+                try:
+                    self._save_skin(name)
+                except Exception:  # noqa: BLE001 - the loop must outlive any one write
+                    logger.exception("Persisting skin %r failed", name)
             with self._lock:
                 if self._pending_skin is None:
                     self._persist_idle.set()
@@ -520,4 +523,4 @@ def serve_forever(
             logger.info("Shutting down")
         finally:
             stop.set()
-            service.wait_persisted(2.0)
+            service.wait_persisted(30.0)  # a slow disk may hold the last switch this long
