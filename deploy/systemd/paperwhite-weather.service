@@ -1,8 +1,9 @@
 # User-level systemd unit for the dashboard service on the Raspberry Pi.
 #
-# Install (as the user that owns the checkout; lingering must be enabled so the service
-# starts at boot without a login: `loginctl show-user $USER -p Linger` must say `yes`,
-# otherwise `sudo loginctl enable-linger $USER`):
+# Install: `deploy/install.sh` does all of the below. By hand (as the user that owns the
+# checkout; lingering must be enabled so the service starts at boot without a login:
+# `loginctl show-user $USER -p Linger` must say `yes`, otherwise
+# `sudo loginctl enable-linger $USER`):
 #
 #   mkdir -p ~/.config/systemd/user
 #   sed "s|%REPO%|$PWD|g" deploy/systemd/paperwhite-weather.service \

@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- `deploy/install.sh`: one-command setup of the service as a user-level systemd unit
+  (environment, `config.yaml` and `.env` from the examples if absent, unit, enable,
+  restart, `/health` check); re-running it is the update. README section "Put it on the
+  wall" walking through the server and the Kindle; `docs/REPOSITORY_STATE.md` re-verified
+  for Sprint 5 (`CITATION.cff` valid, private vulnerability reporting enabled).
 - Project foundation: `src` layout, uv-managed environment, ruff, mypy, pytest, CI, and
   the community files (`AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CITATION.cff`).
 - Configuration model (`location`, `units`, `display`) loaded from YAML with strict

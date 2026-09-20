@@ -62,7 +62,19 @@ report, on purpose.
 | `paperwhite-weather` on TestPyPI | not registered (free) | same against `test.pypi.org` → 404 |
 | Trusted Publishing | not configured; no release yet | blocked on the first release |
 
+## Re-verified on 2026-09-20 (Sprint 5)
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| `CITATION.cff` | valid | `uvx cffconvert --validate` → "Citation metadata are valid according to schema version 1.2.0" |
+| Private vulnerability reporting | enabled | `gh api repos/estcarisimo/paperwhite-weather/private-vulnerability-reporting` → `{"enabled":true}` |
+| `SECURITY.md` report link | resolves | `curl -o /dev/null -w '%{http_code} %{redirect_url}' .../security/advisories/new` → `302` to `github.com/login?return_to=…/security/advisories/new` (the form needs a GitHub login); `.../security/advisories` and `.../security` → 200 |
+| Secret scanning, push protection, Dependabot security updates | enabled | `gh api repos/estcarisimo/paperwhite-weather --jq .security_and_analysis` |
+| Open alerts (Dependabot / code scanning / secret scanning) | 0 / 0 / 0 | `gh api ".../{dependabot,code-scanning,secret-scanning}/alerts?state=open"` |
+| `paperwhite-weather` on PyPI | still free | `curl -s -o /dev/null -w "%{http_code}" https://pypi.org/pypi/paperwhite-weather/json` → 404 |
+
 ## Blocked or pending
 
 - Nothing is blocked on permissions: the maintainer is the repository admin.
-- Pending: `CITATION.cff` validation with `cffconvert` at the first release.
+- Pending: re-run `uvx cffconvert --validate` after bumping `version` and `date-released`
+  in `CITATION.cff` for the release.
