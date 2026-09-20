@@ -360,13 +360,17 @@ _INDEX = b"""paperwhite-weather
 """
 
 
+_CURRENT = ' class="current"'
+
+
 def _skins_page(service: DashboardService) -> bytes:
     """The ``/skins`` page: the current frame and one button per skin. No scripts."""
     current = service.skin
     following = _after(current)
     buttons = "\n".join(
-        f'<form method="post" action="/skin"><button name="name" value="{html.escape(name)}"'
-        f'{" class=\"current\"" if name == current else ""}>{html.escape(name)}</button></form>'
+        '<form method="post" action="/skin"><button name="name" '
+        f'value="{html.escape(name)}"{_CURRENT if name == current else ""}>'
+        f"{html.escape(name)}</button></form>"
         for name in available_skins()
     )
     page = f"""<!doctype html>
