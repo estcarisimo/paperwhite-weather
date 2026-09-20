@@ -59,7 +59,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   helpers in `skins/common.py`; DejaVu Serif bundled alongside DejaVu Sans.
 - Monochrome weather icons drawn with Pillow primitives for every condition.
 - Typefaces: Inter for text and Oswald for display numerals (SIL OFL), replacing DejaVu
-  Sans in every skin; DejaVu Serif stays for `newspaper`.
+  Sans in every skin; DejaVu Serif stays for `newspaper`, whose masthead and section
+  heading are set in Playfair Display (SIL OFL, bundled unmodified as the variable font).
 - Icons redrawn with round-capped strokes and a cleaner cloud; dots for drizzle; moon
   variants for clear and partly cloudy, used for the current condition after sunset.
 - Sun arc redrawn: civil twilight as thick gray bands under each end of the horizon, the

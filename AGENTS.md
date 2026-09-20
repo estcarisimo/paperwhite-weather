@@ -34,8 +34,9 @@ src/paperwhite_weather/
                     DailyForecast, HourlyForecast, SunTimes, Condition
   units.py          celsius_to_fahrenheit, kmh_to_mph, kmh_to_ms
   fonts.py          load_font(weight, size): "regular"/"medium"/"bold" (Inter), "display"
-                    (Oswald Medium, condensed numerals), "serif"/"serif-bold" (DejaVu Serif);
-                    all bundled in assets/fonts/
+                    (Oswald Medium, condensed numerals), "serif"/"serif-bold" (DejaVu Serif),
+                    "serif-display" (Playfair Display Bold, mastheads); all bundled in
+                    assets/fonts/
   icons.py          draw_icon(draw, condition, box, night): monochrome vector icons, one per
                     Condition, moon variants for clear and partly cloudy at night;
                     draw_drop(draw, box, level): a drop filled to a fraction; draw_wind,
@@ -162,7 +163,10 @@ uv build                                    # sdist + wheel via uv_build
   supported later; only the defaults are Paperwhite 3.
 - Inter and Oswald are bundled as static instances of the Google Fonts variable fonts
   (made with fontTools) under the SIL Open Font License 1.1 (`LICENSE-Inter.txt`,
-  `LICENSE-Oswald.txt`); DejaVu Serif under the Bitstream Vera license
+  `LICENSE-Oswald.txt`). Playfair Display is bundled unmodified as the variable font
+  (`LICENSE-Playfair.txt`): its license reserves the family name for unmodified files,
+  so `fonts.py` sets the weight axis at load time instead of instancing it. DejaVu Serif
+  is under the Bitstream Vera license
   (`LICENSE-DejaVu.txt`), all in `src/paperwhite_weather/assets/fonts/`. Adding another typeface
   needs a license check and the license file next to it.
 - `MockProvider` builds "today" from the location's local date, not the UTC date.
