@@ -137,10 +137,14 @@ def draw_sun_arc(
         draw.textlength(sunset_text, font=label_font),
     )
 
+    label_y = bottom - label_h + px(4)
+
     # The sun: a filled disc on the arc by day; a crescent on the night half otherwise.
     if sun.civil_dawn <= now <= sun.civil_dusk:
         x, y = point(angle(now))
         ring = sun_r + px(5)
+        # At the ends of twilight the disc sits below the horizon; keep it off the labels.
+        y = min(y, label_y - ring - px(2))
         draw.ellipse((x - ring, y - ring, x + ring, y + ring), fill=WHITE)
         draw.ellipse((x - sun_r, y - sun_r, x + sun_r, y + sun_r), fill=BLACK)
     else:
@@ -156,7 +160,6 @@ def draw_sun_arc(
         glyph.dot(0.0, 0.0, 0.8, WHITE)
         glyph.moon(0.0, 0.0, 0.55)
 
-    label_y = bottom - label_h + px(4)
     draw.text((left, label_y), sunrise_text, font=label_font, fill=BLACK, anchor="la")
     draw.text((right, label_y), sunset_text, font=label_font, fill=BLACK, anchor="ra")
     small_font = load_font("regular", px(_SMALL_LABEL_SIZE))
