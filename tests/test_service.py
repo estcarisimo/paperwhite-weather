@@ -193,6 +193,37 @@ def test_unknown_persisted_skin_is_ignored(
     assert "Ignoring unknown skin 'gone'" in caplog.text
 
 
+def test_unreadable_state_file_is_ignored(
+    settings: Settings, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    (tmp_path / SKIN_STATE_FILE).write_bytes(b"\xff\xfe\x00not utf-8")
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=tmp_path)
+    assert service.skin == "minimal"
+    assert "Ignoring unreadable skin file" in caplog.text
+    service.set_skin("graphic")  # and the next save replaces the bad file atomically
+    assert (tmp_path / SKIN_STATE_FILE).read_text() == "graphic\n"
+    assert not (tmp_path / "skin.tmp").exists()
+
+
+def test_next_skin_is_atomic_under_concurrency(settings: Settings) -> None:
+    """Two concurrent advances land two skins ahead, never on the same one."""
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW))
+    names = available_skins()
+    start = names.index(service.skin)
+    barrier = threading.Barrier(8)
+
+    def advance() -> None:
+        barrier.wait()
+        service.next_skin()
+
+    threads = [threading.Thread(target=advance) for _ in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert service.skin == names[(start + 8) % len(names)]
+
+
 def test_unwritable_state_dir_does_not_break_switching(
     settings: Settings, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -361,6 +392,25 @@ def test_http_post_skin_path_and_next(server: str) -> None:
     with pytest.raises(HTTPError) as excinfo:
         _post(f"{server}/health")
     assert excinfo.value.code == 404
+
+
+@pytest.mark.parametrize("length", ["notanumber", "-1"])
+def test_http_post_bad_content_length_is_a_400(server: str, length: str) -> None:
+    host, port = server[len("http://") :].split(":")
+    with socket.create_connection((host, int(port)), timeout=5) as sock:
+        sock.sendall(
+            f"POST /skin HTTP/1.1\r\nHost: {host}\r\nContent-Length: {length}\r\n"
+            "Connection: close\r\n\r\n".encode()
+        )
+        reply = sock.recv(4096)
+    assert reply.startswith(b"HTTP/1.0 400"), reply[:60]
+    assert json.loads(_get(f"{server}/health")[2])["skin"] == "minimal"
+
+
+def test_handler_has_a_socket_timeout() -> None:
+    from paperwhite_weather.service import DashboardHandler
+
+    assert DashboardHandler.timeout == 30
 
 
 def test_http_get_does_not_switch(server: str) -> None:

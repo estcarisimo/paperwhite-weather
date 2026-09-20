@@ -17,7 +17,8 @@
 # PAPERWHITE_CONFIG (default %REPO%/config.yaml, git-ignored; copy config.example.yaml),
 # PAPERWHITE_PROVIDER (default mock), PAPERWHITE_HOST (default 0.0.0.0), PAPERWHITE_PORT
 # (default 8765), PAPERWHITE_STATE_DIR (the skin chosen from /skins survives restarts;
-# the unit points it at systemd's state directory, ~/.local/state/paperwhite-weather).
+# the unit points it at its StateDirectory, %S/paperwhite-weather, which for a user
+# manager on systemd 252 is ~/.config/paperwhite-weather).
 # Override any of them with `systemctl --user edit paperwhite-weather.service`
 # or in %REPO%/.env (git-ignored; start from .env.example).
 

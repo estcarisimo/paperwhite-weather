@@ -12,7 +12,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   it for every client from the next frame on; `/health` reports `skin` and the `skins`
   list. `display.skin` stays the skin at startup; the choice is persisted in
   `PAPERWHITE_STATE_DIR` (`paperwhite serve --state-dir`), which the systemd unit points
-  at its `StateDirectory`, so a restart keeps it. First half of the "switch skins without
+  at its `StateDirectory` (`~/.config/paperwhite-weather` for a user unit on systemd 252),
+  so a restart keeps it. First half of the "switch skins without
   visible buttons" design; a long press on the panel is the second.
 - Documentation site: the `docs/` folder built with MkDocs (Material) and published on
   GitHub Pages at https://estcarisimo.github.io/paperwhite-weather/; `docs/index.md`

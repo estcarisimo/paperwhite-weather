@@ -28,8 +28,9 @@ The skin can be changed while the service runs, from any phone or laptop on the 
 open `http://<server>.lan:8765/skins` and tap a name. Every client shows the new skin at
 its next refresh (a tap on the Kindle fetches a frame right away). `display.skin` in
 `config.yaml` is the skin at startup; the runtime choice is persisted in
-`PAPERWHITE_STATE_DIR` (the unit sets `~/.local/state/paperwhite-weather`), so a restart
-keeps it. Anyone on the LAN can switch it; there is no authentication, by design, as with
+`PAPERWHITE_STATE_DIR` (the unit sets its `StateDirectory`, `~/.config/paperwhite-weather`
+on the maintainer's Pi: a user manager's `%S` is `$XDG_CONFIG_HOME` on systemd 252), so a
+restart keeps it. Anyone on the LAN can switch it; there is no authentication, by design, as with
 the frames themselves.
 
 ## Configuration
@@ -42,7 +43,7 @@ The unit passes settings as environment variables, so it never needs editing:
 | `PAPERWHITE_PROVIDER` | `mock` | Weather provider name (`paperwhite providers`) |
 | `PAPERWHITE_HOST` | `0.0.0.0` | Interface to listen on |
 | `PAPERWHITE_PORT` | `8765` | TCP port |
-| `PAPERWHITE_STATE_DIR` | `~/.local/state/paperwhite-weather` (unit only; unset for a manual `serve`) | Keeps the skin chosen at runtime across restarts |
+| `PAPERWHITE_STATE_DIR` | the unit's `StateDirectory` (`%S/paperwhite-weather`: `~/.config/paperwhite-weather` for a user manager on systemd 252); unset for a manual `serve` | Keeps the skin chosen at runtime across restarts |
 
 Override any of them in `<repo>/.env` (git-ignored; `cp .env.example .env` and edit) or
 with `systemctl --user edit paperwhite-weather.service`. The same variables work for a

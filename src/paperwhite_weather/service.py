@@ -122,21 +122,37 @@ class DashboardService:
             raise ValueError(f"unknown skin {name!r}; available: {', '.join(available_skins())}")
         with self._lock:
             self.state.skin = name
-        logger.info("Skin set to %r", name)
-        self._save_skin(name)
+        self._announce(name)
         return name
 
     def next_skin(self) -> str:
-        """Switch to the skin after the current one in ``available_skins()`` order, cyclically."""
+        """Switch to the skin after the current one in ``available_skins()`` order, cyclically.
+
+        Read and write happen under one lock acquisition, so two concurrent calls advance
+        twice instead of both landing on the same skin.
+        """
         names = available_skins()
-        current = self.skin
-        index = names.index(current) if current in names else -1
-        return self.set_skin(names[(index + 1) % len(names)])
+        with self._lock:
+            index = names.index(self.state.skin) if self.state.skin in names else -1
+            name = names[(index + 1) % len(names)]
+            self.state.skin = name
+        self._announce(name)
+        return name
+
+    def _announce(self, name: str) -> None:
+        logger.info("Skin set to %r", name)
+        self._save_skin(name)
 
     def _load_skin(self) -> None:
-        if self._skin_file is None or not self._skin_file.is_file():
+        if self._skin_file is None:
             return
-        name = self._skin_file.read_text(encoding="utf-8").strip()
+        try:
+            name = self._skin_file.read_text(encoding="utf-8").strip()
+        except FileNotFoundError:
+            return
+        except (OSError, UnicodeDecodeError) as exc:
+            logger.warning("Ignoring unreadable skin file %s: %s", self._skin_file, exc)
+            return
         if name in available_skins():
             self.state.skin = name
             logger.info("Skin %r restored from %s", name, self._skin_file)
@@ -148,7 +164,11 @@ class DashboardService:
             return
         try:
             self._skin_file.parent.mkdir(parents=True, exist_ok=True)
-            self._skin_file.write_text(name + "\n", encoding="utf-8")
+            # Write-then-rename, so a crash mid-write leaves the previous choice, not a
+            # truncated file.
+            temporary = self._skin_file.with_suffix(".tmp")
+            temporary.write_text(name + "\n", encoding="utf-8")
+            temporary.replace(self._skin_file)
         except OSError as exc:
             logger.warning("Could not persist the skin to %s: %s", self._skin_file, exc)
 
@@ -270,6 +290,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     server: DashboardServer  # narrowed for type checkers
     server_version = f"{SERVICE_NAME}/{__version__}"
+    #: Socket timeout per connection, so a client that stops sending cannot pin a thread.
+    timeout = 30
+    #: Longest POST body read; the form is one short field.
+    max_body = 4096
 
     def version_string(self) -> str:
         """``Server`` header without the Python version (and without the trailing space)."""
@@ -307,7 +331,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
         service = self.server.service
         path = self.path.split("?", 1)[0]
         if path == "/skin":
-            name = self._form().get("name", [""])[0]
+            form = self._form()
+            if form is None:
+                self._send(HTTPStatus.BAD_REQUEST, "text/plain", b"bad Content-Length\n")
+                return
+            name = form.get("name", [""])[0]
             try:
                 service.set_skin(name)
             except ValueError as exc:
@@ -328,9 +356,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
         else:
             self._send(HTTPStatus.NOT_FOUND, "text/plain", b"not found\n")
 
-    def _form(self) -> dict[str, list[str]]:
-        length = int(self.headers.get("Content-Length") or 0)
-        body = self.rfile.read(min(length, 4096)) if length else b""
+    def _form(self) -> dict[str, list[str]] | None:
+        """The urlencoded body, or ``None`` when ``Content-Length`` is not a usable number."""
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return None
+        if length < 0:
+            return None
+        body = self.rfile.read(min(length, self.max_body)) if length else b""
         return parse_qs(body.decode("utf-8", errors="replace"))
 
     def _send_png(self, data: bytes) -> None:
