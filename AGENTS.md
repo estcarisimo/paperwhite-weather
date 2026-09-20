@@ -52,8 +52,10 @@ src/paperwhite_weather/
                     sun_arc(), temperature_bars(), band_chart(), day_columns(), metrics_strip(),
                     number(), footer(), metrics()),
                     band_chart.py (draw_band_chart: the week's highs and lows as two curves
-                    with the band between), minimal.py, newspaper.py, weather_station.py,
-                    big_clock.py, forecast.py, graphic.py;
+                    with the band between), timeline_chart.py (draw_timeline: hours as a
+                    temperature curve, rain bars, wind, night shading; hours_from_midnight),
+                    minimal.py, newspaper.py, weather_station.py, big_clock.py, forecast.py,
+                    graphic.py, timeline.py;
                     registry in __init__.py: get_skin(name), available_skins()
   render.py         render_dashboard(snapshot, settings, now) -> "L" image at native size;
                     render_offline(settings, last_attempt_at, message); quantize_grayscale(image, levels)

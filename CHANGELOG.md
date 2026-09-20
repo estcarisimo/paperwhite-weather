@@ -32,9 +32,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   icon, the temperature in the Oswald display face), the optional metrics as glyphs
   (thermometer, drops, wind), the sun arc, and the week as a high/low band chart
   (`skins/band_chart.py`: two smooth curves with the band between, values by the dots,
-  a rain drop per day, today's temperature as a hollow ring). Shared pieces on the
+  a rain drop per day, today's temperature as a hollow ring when it has clear room
+  from the dots). Shared pieces on the
   canvas: `band_chart()`, `metrics_strip()`, `number()`; glyphs `icons.draw_wind` and
   `icons.draw_thermometer`.
+- `timeline` skin, the day hour by hour from the hourly forecast
+  (`skins/timeline_chart.py`): a temperature curve with its value every three hours and
+  a marker at now, the night shaded, rain probability as a bar per hour, wind as strokes
+  that follow the speed, condition icons above every third hour (moon variants after
+  sunset), a divider and the weekday at midnight. Portrait shows today midnight to
+  midnight with tomorrow as one row; landscape runs into tomorrow's morning with
+  tomorrow in the corner. Without hourly data the skin says so instead of a chart.
 - Four more skins, each with portrait and landscape layouts: `newspaper` (serif front
   page), `weather-station` (metrics grid), `big-clock`, and `forecast`. Shared drawing
   helpers in `skins/common.py`; DejaVu Serif bundled alongside DejaVu Sans.

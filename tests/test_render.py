@@ -24,6 +24,7 @@ def test_registry_lists_every_skin() -> None:
         "graphic",
         "minimal",
         "newspaper",
+        "timeline",
         "weather-station",
     ]
     assert get_skin("minimal").name == "minimal"
@@ -61,6 +62,7 @@ def test_skins_keep_margins_clear_and_handle_sparse_data(
         update={
             "current": sparse_current,
             "daily": [snapshot.daily[0].model_copy(update={"precipitation_probability": None})],
+            "hourly": [],
             "location": snapshot.location.model_copy(update={"name": None}),
         }
     )
