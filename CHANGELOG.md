@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.0] - 2026-09-20
+
+First release: the service on a Raspberry Pi, the client on a jailbroken Kindle
+Paperwhite 3, seven skins, live weather from Open-Meteo. Installed from GitHub; not
+published to any package index.
+
 ### Added
 - `deploy/install.sh`: one-command setup of the service as a user-level systemd unit
   (environment, `config.yaml` and `.env` from the examples if absent, unit, enable,
@@ -128,3 +136,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - `SECURITY.md` and `CODE_OF_CONDUCT.md` no longer contain an email address; every
   contact path goes through GitHub.
 - Default orientation is now `landscape` (was `portrait`).
+
+[Unreleased]: https://github.com/estcarisimo/paperwhite-weather/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/estcarisimo/paperwhite-weather/releases/tag/v0.1.0

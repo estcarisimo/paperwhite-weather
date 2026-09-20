@@ -9,11 +9,11 @@ displays it.
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> **Status: on the wall (2026-09-20).** The service runs on the maintainer's Raspberry Pi
-> with live Open-Meteo data; the Kindle fetches a frame every 15 minutes, sleeps between
-> refreshes, and starts the dashboard by itself after a reboot. Seven skins are done;
-> what is left before a 0.1.0 release is polish and documentation, see
-> [`docs/ROADMAP.md`](docs/ROADMAP.md).
+> **Status: on the wall, version 0.1.0 (2026-09-20).** The service runs on the
+> maintainer's Raspberry Pi with live Open-Meteo data; the Kindle fetches a frame every
+> 15 minutes, sleeps between refreshes, and starts the dashboard by itself after a
+> reboot. Seven skins; what changed and what is planned are in
+> [`CHANGELOG.md`](CHANGELOG.md) and [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## ✨ Features
 
