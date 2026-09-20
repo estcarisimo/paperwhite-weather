@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import socket
 import threading
+import time
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
@@ -178,6 +179,7 @@ def test_skin_is_persisted_in_the_state_dir(settings: Settings, tmp_path: Path) 
     state_dir = tmp_path / "state"  # does not exist yet; the service creates it
     service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=state_dir)
     service.set_skin("graphic")
+    assert service.wait_persisted(60.0)
     assert (state_dir / SKIN_STATE_FILE).read_text() == "graphic\n"
     restarted = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=state_dir)
     assert restarted.skin == "graphic"
@@ -201,13 +203,14 @@ def test_unreadable_state_file_is_ignored(
     assert service.skin == "minimal"
     assert "Ignoring unreadable skin file" in caplog.text
     service.set_skin("graphic")  # and the next save replaces the bad file atomically
+    assert service.wait_persisted(60.0)
     assert (tmp_path / SKIN_STATE_FILE).read_text() == "graphic\n"
     assert not (tmp_path / "skin.tmp").exists()
 
 
-def test_next_skin_is_atomic_under_concurrency(settings: Settings) -> None:
-    """Two concurrent advances land two skins ahead, never on the same one."""
-    service = DashboardService(settings, MockProvider(now=FIXED_NOW))
+def test_next_skin_is_atomic_under_concurrency(settings: Settings, tmp_path: Path) -> None:
+    """Concurrent advances each count once, and the file ends with the final skin intact."""
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=tmp_path)
     names = available_skins()
     start = names.index(service.skin)
     barrier = threading.Barrier(8)
@@ -222,6 +225,8 @@ def test_next_skin_is_atomic_under_concurrency(settings: Settings) -> None:
     for thread in threads:
         thread.join()
     assert service.skin == names[(start + 8) % len(names)]
+    assert service.wait_persisted(60.0)
+    assert (tmp_path / SKIN_STATE_FILE).read_text() == service.skin + "\n"
 
 
 def test_unwritable_state_dir_does_not_break_switching(
@@ -232,7 +237,34 @@ def test_unwritable_state_dir_does_not_break_switching(
     service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=blocker)
     assert service.set_skin("forecast") == "forecast"
     assert service.skin == "forecast"
+    assert service.wait_persisted(60.0)
     assert "Could not persist the skin" in caplog.text
+
+
+def test_requests_never_wait_for_the_disk(
+    settings: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A slow file write (seen to take 30 s on the Pi) must not delay the switch."""
+    from paperwhite_weather import service as module
+
+    gate = threading.Event()
+    original = module.DashboardService._save_skin
+
+    def slow_save(self: DashboardService, name: str) -> None:
+        gate.wait(5)
+        original(self, name)
+
+    monkeypatch.setattr(module.DashboardService, "_save_skin", slow_save)
+    service = DashboardService(settings, MockProvider(now=FIXED_NOW), state_dir=tmp_path)
+    started = time.monotonic()
+    service.set_skin("newspaper")
+    service.next_skin()
+    assert time.monotonic() - started < 1.0
+    assert service.skin == "timeline"
+    assert not service.wait_persisted(0.2), "still writing while the disk is slow"
+    gate.set()
+    assert service.wait_persisted(60.0)
+    assert (tmp_path / SKIN_STATE_FILE).read_text() == "timeline\n"
 
 
 def test_refresh_during_render_does_not_cache_a_stale_frame(

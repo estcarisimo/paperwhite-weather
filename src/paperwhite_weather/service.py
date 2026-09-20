@@ -87,6 +87,15 @@ class DashboardService:
         Directory where the skin chosen at runtime is persisted (created if missing).
         ``None`` keeps the choice in memory only, so a restart returns to
         ``settings.display.skin``.
+
+    Notes
+    -----
+    The state file is written by one background thread, never by a request handler: on
+    the maintainer's Raspberry Pi a small file write has been seen to block for over
+    thirty seconds now and then (measured 2026-09-20: write, fsync, and rename alike),
+    and a ``POST /skin`` must answer at once because the Kindle refetches right after
+    it. One writer also means concurrent switches cannot interleave in the file; the
+    latest choice is what lands on disk.
     """
 
     def __init__(
@@ -102,7 +111,13 @@ class DashboardService:
         self.state = ServiceState(skin=settings.display.skin)
         self._lock = threading.Lock()
         self._skin_file = state_dir / SKIN_STATE_FILE if state_dir is not None else None
+        self._pending_skin: str | None = None
+        self._persist_wake = threading.Event()
+        self._persist_idle = threading.Event()
+        self._persist_idle.set()
         self._load_skin()
+        if self._skin_file is not None:
+            threading.Thread(target=self._persist_loop, name="persist-skin", daemon=True).start()
 
     @property
     def skin(self) -> str:
@@ -141,7 +156,33 @@ class DashboardService:
 
     def _announce(self, name: str) -> None:
         logger.info("Skin set to %r", name)
-        self._save_skin(name)
+        if self._skin_file is None:
+            return
+        with self._lock:
+            self._pending_skin = name
+            self._persist_idle.clear()
+        self._persist_wake.set()
+
+    def wait_persisted(self, timeout: float = 5.0) -> bool:
+        """Block until every skin change so far is on disk (or was given up on with a warning).
+
+        Returns ``False`` if that took longer than ``timeout`` seconds. Used by tests and at
+        shutdown; requests never wait on it.
+        """
+        return self._persist_idle.wait(timeout)
+
+    def _persist_loop(self) -> None:
+        while True:
+            self._persist_wake.wait()
+            with self._lock:
+                name = self._pending_skin
+                self._pending_skin = None
+                self._persist_wake.clear()
+            if name is not None:
+                self._save_skin(name)
+            with self._lock:
+                if self._pending_skin is None:
+                    self._persist_idle.set()
 
     def _load_skin(self) -> None:
         if self._skin_file is None:
@@ -165,7 +206,8 @@ class DashboardService:
         try:
             self._skin_file.parent.mkdir(parents=True, exist_ok=True)
             # Write-then-rename, so a crash mid-write leaves the previous choice, not a
-            # truncated file.
+            # truncated file. Only the persist thread runs this, so the temporary name
+            # cannot be shared with another writer.
             temporary = self._skin_file.with_suffix(".tmp")
             temporary.write_text(name + "\n", encoding="utf-8")
             temporary.replace(self._skin_file)
@@ -478,3 +520,4 @@ def serve_forever(
             logger.info("Shutting down")
         finally:
             stop.set()
+            service.wait_persisted(2.0)
