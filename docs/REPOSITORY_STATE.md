@@ -76,5 +76,5 @@ report, on purpose. No email address appears in the repository; contact paths ar
 ## Blocked or pending
 
 - Nothing is blocked on permissions: the maintainer is the repository admin.
-- Pending: re-run `uvx cffconvert --validate` after bumping `version` and `date-released`
-  in `CITATION.cff` for the release.
+- `CITATION.cff` re-validated on 2026-09-20 with `date-released: "2026-09-20"` for 0.1.0
+  (`uvx cffconvert --validate` → valid, schema 1.2.0).
