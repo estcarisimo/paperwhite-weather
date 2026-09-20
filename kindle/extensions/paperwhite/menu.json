@@ -8,9 +8,10 @@
         {"name": "Stop dashboard (back to Kindle)", "priority": 2, "action": "./bin/stop.sh"},
         {"name": "Show one frame now", "priority": 3, "action": "./bin/once.sh"},
         {"name": "Toggle orientation", "priority": 4, "action": "./bin/toggle.sh"},
-        {"name": "Status", "priority": 5, "action": "./bin/status.sh"},
-        {"name": "Enable start at boot", "priority": 6, "action": "./bin/enable-boot.sh"},
-        {"name": "Disable start at boot", "priority": 7, "action": "./bin/disable-boot.sh"}
+        {"name": "Next skin", "priority": 5, "action": "./bin/next-skin.sh"},
+        {"name": "Status", "priority": 6, "action": "./bin/status.sh"},
+        {"name": "Enable start at boot", "priority": 7, "action": "./bin/enable-boot.sh"},
+        {"name": "Disable start at boot", "priority": 8, "action": "./bin/disable-boot.sh"}
       ]
     }
   ]

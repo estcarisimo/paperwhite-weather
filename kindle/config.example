@@ -20,6 +20,10 @@ SUSPEND="yes"
 # suspended, taps are ignored; the power button wakes the device for another window.
 AWAKE_SECONDS="90"
 
+# Seconds a finger must stay on the panel to count as a long press, which asks the server
+# for the next skin (a shorter touch switches orientation). One-second granularity.
+LONG_PRESS_SECONDS="2"
+
 # Every N frames, clear the panel first (a full refresh removes ghosting; it flashes).
 FULL_REFRESH_EVERY="4"
 

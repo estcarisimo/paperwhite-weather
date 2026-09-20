@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- A long press on the panel (`LONG_PRESS_SECONDS`, 2) asks the server for the next skin
+  and paints it; a tap still switches orientation. The client reads the touch controller
+  through one descriptor for the whole gesture so a lift is never missed, and ignores a
+  lift or movement seen without its landing. `paperwhite.sh next-skin` and a KUAL entry
+  do the same. Second half of the "switch skins without visible buttons" design.
 - Switch skins without touching the config: the service owns the current skin at runtime.
   `GET /skins` is a phone-sized page (no scripts) with the current frame and one button per
   skin; `POST /skin` (form field `name`), `POST /skin/<name>`, and `POST /skin/next` set

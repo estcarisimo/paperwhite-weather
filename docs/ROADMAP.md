@@ -163,9 +163,10 @@ Both halves share one source of truth: the server's current skin.
 
 - [x] Server: `/skins` page for a phone, `POST /skin` and `POST /skin/next`, persisted in
       the unit's state directory; `/health` reports it (2026-09-20).
-- [ ] Device: a long press on the panel (about two seconds) asks the server for the next
-      skin and refetches; a tap keeps toggling orientation. Tested on the Kindle with
-      `evemu-event` press/release for reliability, latency, and unchanged suspend/wake.
+- [x] Device: a long press on the panel (`LONG_PRESS_SECONDS`, 2) asks the server for the
+      next skin and refetches; a tap keeps toggling orientation. Tested on the Kindle with
+      `evemu-event` press/release (2026-09-20, `docs/DEVICE.md`); a real-finger check by
+      the maintainer is the remaining step.
 
 ## Parking lot
 

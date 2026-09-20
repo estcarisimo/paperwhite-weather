@@ -172,6 +172,18 @@ stop the framework or keep repainting.
 | `ip route`, `awk`, `timeout`, `dd`, `setsid`, `nohup`, `evemu-event`, `fbgrab` present | `which`; `evemu`/`fbgrab` come with USBNetwork |
 | `fbgrab /mnt/us/screen.png` captures the panel as a 1072x1448 PNG | run over SSH |
 
+## Long press verified on 2026-09-20 (`kindle/paperwhite.sh`, synthetic events over SSH)
+
+| Verified | Evidence |
+| --- | --- |
+| `curl` 7.86.0 is on the stock firmware (`/usr/bin/curl`); BusyBox 1.34.1 `wget` has no `--post-data`, so the client posts with `curl` | `command -v curl`, `wget` usage text |
+| A 3 s `BTN_TOUCH` press/release asks the server for the next skin; the frame is refetched; orientation unchanged | `evemu-event … BTN_TOUCH --value 1`, `sleep 3`, `--value 0`: `paperwhite.log` `skin: {"skin": "graphic"}` 2 s after the press; `state/orientation` unchanged; `/health` on the server reports the new skin |
+| A tap still toggles orientation, in the same second | two taps: `orientation: portrait`, then `landscape`, each logged at the tap's second |
+| A 1 s hold is a tap, not a long press (`LONG_PRESS_SECONDS` 2) | press, `sleep 1`, release: `orientation: portrait` logged, no skin change |
+| The gesture is read through one open descriptor; with the device reopened per read (the first implementation) evdev dropped the events in between and a tap whose lift fell in a gap, or whose landing arrived while the loop was painting, counted as a hold | first run: two taps logged as `skin:` changes; after the fix (fd 3 held from landing to drain): the four gestures above, all correct, twice |
+| The server answers `POST /skin/next` at once; before PR #31's background persistence it took up to 15 s on this Pi under load, and the Kindle's follow-up tap was swallowed by the late drain | `curl -sv -X POST` from the device: 0 s after, 15 s timeout before |
+| Suspend and wake unchanged: the awake window is extended by each gesture as by a tap; the next `suspend for … s` line follows | `paperwhite.log` after the test |
+
 ## Power: measured and verified on 2026-09-19
 
 | Fact | Evidence |
