@@ -151,7 +151,5 @@ def test_uv_index_and_moon_phase_are_validated() -> None:
     with pytest.raises(ValidationError):
         CurrentConditions(temperature=1.0, condition=Condition.CLEAR, uv_index=-1.0)
     with pytest.raises(ValidationError):
-        _day(0).model_copy(update={"uv_index_max": -0.5}).model_validate(
-            {**_day(0).model_dump(), "uv_index_max": -0.5}
-        )
+        DailyForecast.model_validate({**_day(0).model_dump(), "uv_index_max": -0.5})
     assert _day(0).model_copy(update={"uv_index_max": 6.0}).uv_index_max == 6.0
