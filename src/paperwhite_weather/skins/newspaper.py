@@ -31,7 +31,9 @@ class NewspaperSkin:
 
         # Masthead.
         y = m
-        c.text((c.width / 2, y), name.upper(), "serif-bold", 96, anchor="ma", max_width=w)
+        c.text(
+            (c.width / 2, y - c.px(6)), name.upper(), "serif-display", 92, anchor="ma", max_width=w
+        )
         y += c.px(120)
         y = c.rule(m, y, w, BLACK, 4) + c.px(8)
         c.text(
@@ -86,7 +88,7 @@ class NewspaperSkin:
         # Below the fold: the forecast as columns, sized to the space that is left.
         y += c.px(30)
         y = c.rule(m, y, w, BLACK, 2) + c.px(20)
-        c.text((m, y), "The days ahead", "serif-bold", 40, anchor="la")
+        c.text((m, y), "The days ahead", "serif-display", 42, anchor="la")
         y += c.px(60)
         days = snapshot.daily[1 : _FORECAST_DAYS + 1]
         if days:
