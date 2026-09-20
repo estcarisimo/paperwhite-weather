@@ -1,7 +1,8 @@
 #!/bin/sh
 # Paperwhite Weather: Kindle client.
 # Runs as root on a jailbroken Kindle (BusyBox ash). Fetches the dashboard frame from the
-# server, paints it with eips, toggles orientation on a tap, repeats.
+# server, paints it with eips, toggles orientation on a tap, asks the server for the next
+# skin on a long press, repeats.
 #
 # Verified on a Kindle Paperwhite 3, firmware 5.16.2.1.1, on 2026-09-19 (docs/DEVICE.md).
 #
@@ -12,7 +13,7 @@
 #   cache/current.png   last frame fetched; shown when the server is unreachable
 #   paperwhite.log      one line per event
 #
-# Usage: paperwhite.sh start|stop|once|status|toggle|enable-boot|disable-boot
+# Usage: paperwhite.sh start|stop|once|status|toggle|next-skin|enable-boot|disable-boot
 #        (loop and boot: internal, used by start and by the upstart job)
 #
 # Power: after each refresh the device stays awake AWAKE_SECONDS for taps, then suspends
@@ -43,6 +44,7 @@ FULL_REFRESH_EVERY="4"
 TAP_WINDOW_SECONDS="60"
 SUSPEND="yes"
 AWAKE_SECONDS="90"
+LONG_PRESS_SECONDS="2"
 STOP_FRAMEWORK="yes"
 FRONTLIGHT="0"
 LOG_LINES="500"
@@ -73,6 +75,7 @@ load_config() {
     FULL_REFRESH_EVERY="$(positive_int_or "$FULL_REFRESH_EVERY" 4)"
     TAP_WINDOW_SECONDS="$(positive_int_or "$TAP_WINDOW_SECONDS" 60)"
     AWAKE_SECONDS="$(positive_int_or "$AWAKE_SECONDS" 90)"
+    LONG_PRESS_SECONDS="$(positive_int_or "$LONG_PRESS_SECONDS" 2)"
     case "$SUSPEND" in yes|no) ;; *) SUSPEND="yes" ;; esac
     SERVER_PORT="$(positive_int_or "$SERVER_PORT" 8765)"
     case "$FRONTLIGHT" in ''|*[!0-9]*) FRONTLIGHT="0" ;; esac
@@ -158,15 +161,74 @@ paint() {
     "$EIPS" -g "$CACHE/current.png" > /dev/null 2>&1
 }
 
+# Touch events are 16 bytes: seconds, microseconds, type | code << 16, value. The
+# controller reports BTN_TOUCH (type 1, code 330) with value 1 when a finger lands and 0
+# when it lifts. The kernel queues events only for readers that hold the device open, so
+# one gesture is read through a single descriptor (fd 3) opened by wait_for_tap and closed
+# by drain_touch; opening the device per read would drop the events in between.
+
+read_event() {
+    # Reads one event from fd 3 within $1 seconds into $CACHE/event; 1 on timeout.
+    timeout "$1" dd bs=16 count=1 of="$CACHE/event" <&3 2>/dev/null && [ -s "$CACHE/event" ]
+}
+
+event_is_touch() {
+    # $1: 1 for a finger landing, 0 for lifting. Tests the event in $CACHE/event.
+    # shellcheck disable=SC2046 # od prints four unsigned words; split on purpose
+    set -- $(od -An -v -tu4 -w16 "$CACHE/event") "$1"
+    [ "$#" -eq 5 ] && [ $(( $3 % 65536 )) -eq 1 ] && [ $(( $3 / 65536 )) -eq 330 ] \
+        && [ "$4" -eq "$5" ]
+}
+
 wait_for_tap() {
-    # Blocks up to $1 seconds; returns 0 if the screen was touched.
+    # Blocks up to $1 seconds; returns 0 when a finger lands (fd 3 stays open for the rest
+    # of the gesture), 1 on timeout. A lift or movement seen without its landing (the
+    # loop was painting when the finger arrived) is not a gesture and is skipped.
     [ -e "$TOUCH_DEVICE" ] || { sleep "$1"; return 1; }
-    timeout "$1" dd if="$TOUCH_DEVICE" bs=16 count=1 > /dev/null 2>&1
+    exec 3< "$TOUCH_DEVICE"
+    deadline=$(( $(date +%s) + $1 ))
+    while :; do
+        left=$(( deadline - $(date +%s) ))
+        [ "$left" -gt 0 ] || { exec 3<&-; return 1; }
+        read_event "$left" || continue
+        event_is_touch 1 && return 0
+    done
+}
+
+press_is_long() {
+    # Called right after wait_for_tap. Returns 0 when the finger is still down
+    # LONG_PRESS_SECONDS later, 1 as soon as it lifts. Clock granularity is one second, so
+    # a hold of LONG_PRESS_SECONDS to LONG_PRESS_SECONDS+1 counts as long.
+    start="$(date +%s)"
+    while [ $(( $(date +%s) - start )) -lt "$LONG_PRESS_SECONDS" ]; do
+        read_event 1 || continue
+        event_is_touch 0 && return 1
+    done
+    return 0
+}
+
+http_post() {
+    # POST with an empty body to $1; prints the response body. curl ships with the
+    # firmware (the jailbreak used it); BusyBox wget here has no --post-data.
+    if command -v curl > /dev/null 2>&1; then
+        curl -s -m 15 -X POST "$1" 2>/dev/null
+    else
+        log "post: curl not found; cannot $1"
+        return 1
+    fi
+}
+
+next_skin() {
+    # Ask the server for the skin after the current one; the frame is fetched afterwards.
+    server="$(discover)" || { log "skin: no server found"; return 1; }
+    answer="$(http_post "$server/skin/next")" || return 1
+    log "skin: $(printf '%s' "$answer" | tr -d '\n' | head -c 80)"
 }
 
 drain_touch() {
-    # Swallow the rest of the gesture so one tap does not count twice.
-    timeout 1 dd if="$TOUCH_DEVICE" bs=16 count=64 > /dev/null 2>&1
+    # Swallow the rest of the gesture so one tap does not count twice, then release fd 3.
+    timeout 1 dd bs=16 count=64 <&3 > /dev/null 2>&1
+    exec 3<&-
     return 0
 }
 
@@ -293,8 +355,8 @@ run_loop() {
                 [ "$window" -gt 0 ] || window=1
             fi
             if wait_for_tap "$window"; then
+                if press_is_long; then next_skin; else toggle_orientation; fi
                 drain_touch
-                toggle_orientation
                 fetch_frame
                 paint full
                 cycle=0
@@ -362,6 +424,9 @@ case "$1" in
         if boot_enabled; then echo "start at boot: enabled"; else echo "start at boot: disabled"; fi
         tail -n 5 "$LOG" 2>/dev/null
         ;;
+    next-skin)
+        next_skin && echo "asked the server for the next skin (shown at the next refresh or tap)"
+        ;;
     toggle)
         load_config
         toggle_orientation
@@ -384,7 +449,7 @@ case "$1" in
         fi
         ;;
     *)
-        echo "usage: $0 start|stop|once|status|toggle|enable-boot|disable-boot" >&2
+        echo "usage: $0 start|stop|once|status|toggle|next-skin|enable-boot|disable-boot" >&2
         exit 2
         ;;
 esac
