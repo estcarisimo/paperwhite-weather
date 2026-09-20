@@ -1,0 +1,61 @@
+# Documentation site: `uv run mkdocs serve` to preview, `uv run mkdocs build --strict` to
+# check. Built on every pull request and deployed to GitHub Pages from `main` by
+# .github/workflows/docs.yml. The pages are the repository's docs/ folder as they are.
+site_name: Paperwhite Weather
+site_description: Turn a used Kindle Paperwhite into a quiet, always-on e-ink weather dashboard
+site_url: https://estcarisimo.github.io/paperwhite-weather/
+repo_url: https://github.com/estcarisimo/paperwhite-weather
+repo_name: estcarisimo/paperwhite-weather
+edit_uri: edit/main/docs/
+copyright: MIT license. Bundled fonts under their own licenses.
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: blue grey
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: blue grey
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.integrate
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - attr_list
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Architecture: ARCHITECTURE.md
+  - Deploying the service: DEPLOY.md
+  - Device notes: DEVICE.md
+  - Roadmap: ROADMAP.md
+  - Repository state: REPOSITORY_STATE.md
+  - On GitHub:
+      - Kindle client (kindle/README.md): https://github.com/estcarisimo/paperwhite-weather/blob/main/kindle/README.md
+      - Changelog: https://github.com/estcarisimo/paperwhite-weather/blob/main/CHANGELOG.md
+      - Contributing: https://github.com/estcarisimo/paperwhite-weather/blob/main/CONTRIBUTING.md
+      - Releases: https://github.com/estcarisimo/paperwhite-weather/releases
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn

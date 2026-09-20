@@ -73,7 +73,11 @@ tests/              pytest; conftest.py has the example-config and fixed-snapsho
 deploy/             systemd user unit and Avahi service file for the Raspberry Pi
 kindle/             paperwhite.sh (client, verified on the device), config.example,
                     extensions/paperwhite (KUAL), install.sh (draft); ShellCheck in CI
-docs/               ARCHITECTURE.md, DEVICE.md, DEPLOY.md, ROADMAP.md, REPOSITORY_STATE.md
+docs/               index.md (site landing page), ARCHITECTURE.md, DEVICE.md, DEPLOY.md,
+                    ROADMAP.md, REPOSITORY_STATE.md; img/ (skin screenshots, committed)
+mkdocs.yml          MkDocs (Material) site over docs/; built --strict on every PR and
+                    deployed to GitHub Pages from main by .github/workflows/docs.yml;
+                    https://estcarisimo.github.io/paperwhite-weather/
 config.example.yaml Example configuration; real config.yaml is git-ignored
 ```
 
@@ -86,6 +90,7 @@ uv run ruff check src/ tests/
 uv run ruff format src/ tests/              # CI checks with --check
 uv run mypy src/paperwhite_weather          # blocking in CI (disallow_untyped_defs)
 uv run pytest --cov=paperwhite_weather      # CI enforces --cov-fail-under=85
+uv sync --group docs && uv run mkdocs build --strict   # the docs site; `mkdocs serve` to preview
 uv run paperwhite render --config config.example.yaml --output /tmp/dashboard.png
 uv run paperwhite render -c config.example.yaml -o /tmp/d.png --now 2026-09-18T21:45:00+00:00
 uv run paperwhite gallery -c config.example.yaml -o tests/goldens --now 2026-09-18T21:45:00+00:00  # regenerate goldens on purpose

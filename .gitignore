@@ -27,3 +27,6 @@ config.*.yaml
 .DS_Store
 .idea/
 .vscode/
+
+# MkDocs build output
+site/

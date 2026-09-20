@@ -5,7 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- Documentation site: the `docs/` folder built with MkDocs (Material) and published on
+  GitHub Pages at https://estcarisimo.github.io/paperwhite-weather/; `docs/index.md`
+  is the landing page with the skin gallery; `.github/workflows/docs.yml` builds it
+  `--strict` on every pull request and deploys from `main`. `mkdocs` and
+  `mkdocs-material` are the `docs` dependency group.
 
 ## [0.1.0] - 2026-09-20
 

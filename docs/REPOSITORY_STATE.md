@@ -54,6 +54,7 @@ report, on purpose. No email address appears in the repository; contact paths ar
 | Coverage floor | 85 % (`--cov-fail-under=85`); measured 99 % locally on 2026-09-18 | `uv run pytest --cov=paperwhite_weather` |
 | Actions pinned to commit SHAs | yes (`actions/checkout`, `astral-sh/setup-uv`, `actions/upload-artifact`) | `.github/workflows/ci.yml` |
 | Workflow permissions | `contents: read` | `.github/workflows/ci.yml` |
+| GitHub Pages | enabled 2026-09-20 with `build_type: workflow` (deploys from Actions, no `gh-pages` branch); site https://estcarisimo.github.io/paperwhite-weather/ | `gh api -X POST repos/estcarisimo/paperwhite-weather/pages -f build_type=workflow`; `.github/workflows/docs.yml` (`pages: write`, `id-token: write` on the deploy job only) |
 
 ## Package name
 
