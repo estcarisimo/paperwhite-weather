@@ -298,6 +298,23 @@ class FrameSpec:
             )
         if self.leg_inset + self.leg_thickness / 2 > self.outer_size[0] / 2:
             raise ValueError("leg_inset places the fins past the middle of the frame")
+        lip = self.cradle_front_height - self.cradle_floor
+        if lip >= self.bezel_side:
+            limit = self.cradle_floor + self.bezel_side
+            raise ValueError(
+                f"the slotted stand's front lip ({lip:.1f} mm above the slot floor) would "
+                f"cover the display; keep cradle_front_height under {limit:.1f}"
+            )
+        if lip < 5 or self.cradle_rear_height <= self.cradle_front_height:
+            raise ValueError(
+                "cradle_front_height must hold at least 5 mm and stay below cradle_rear_height"
+            )
+        if (
+            self.cradle_foot_height >= self.cradle_front_height
+            or self.cradle_depth
+            <= self.cradle_front_wall + self.cradle_rear_wall + self.device_thickness
+        ):
+            raise ValueError("cradle_foot_height or cradle_depth leaves no stand under the slot")
 
 
 # --- Geometry helpers -----------------------------------------------------------------
@@ -1117,6 +1134,7 @@ def render(
     """Save a picture of the finished piece: on a shelf from the front, and from behind."""
     from PIL import Image
 
+    output.parent.mkdir(parents=True, exist_ok=True)
     surfaces = scene(spec, meshes, screen, design, back)
     solid = np.concatenate([s.mesh.bounds for s in surfaces[:-1]])
     lo, hi = solid.min(axis=0), solid.max(axis=0)
