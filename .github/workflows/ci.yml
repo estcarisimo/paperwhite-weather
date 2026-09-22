@@ -29,10 +29,10 @@ jobs:
         run: uv sync --locked
 
       - name: Ruff lint
-        run: uv run ruff check src/ tests/
+        run: uv run ruff check src/ tests/ hardware/
 
       - name: Ruff format check
-        run: uv run ruff format --check src/ tests/
+        run: uv run ruff format --check src/ tests/ hardware/
 
       - name: mypy
         run: uv run mypy src/paperwhite_weather
@@ -42,6 +42,9 @@ jobs:
 
       - name: ShellCheck (POSIX shell, Kindle client and Pi installer)
         run: uvx --from shellcheck-py shellcheck -s sh kindle/paperwhite.sh kindle/install.sh kindle/extensions/paperwhite/bin/*.sh deploy/install.sh
+
+      - name: 3D-print frame generator (inline dependencies, every part, the drawing)
+        run: uv run hardware/frame/frame.py build -o /tmp/frame --preview /tmp/frame/preview.png --drawing /tmp/frame/drawing.png
 
       - name: pip-audit (audits the locked dependency set)
         run: |

@@ -76,8 +76,13 @@ tests/              pytest; conftest.py has the example-config and fixed-snapsho
 deploy/             systemd user unit and Avahi service file for the Raspberry Pi
 kindle/             paperwhite.sh (client, verified on the device), config.example,
                     extensions/paperwhite (KUAL), install.sh (draft); ShellCheck in CI
+hardware/frame/     frame.py: parametric 3D-printable landscape frame (FrameSpec dataclass,
+                    trimesh + manifold3d CSG, PEP 723 inline deps, run with `uv run`);
+                    stl/ exported parts (regenerate with `frame.py build` after a change);
+                    README.md is the print and assembly guide
 docs/               index.md (site landing page), ARCHITECTURE.md, DEVICE.md, DEPLOY.md,
-                    ROADMAP.md, REPOSITORY_STATE.md; img/ (skin screenshots, committed)
+                    ROADMAP.md, REPOSITORY_STATE.md; img/ (skin screenshots and the
+                    frame preview/drawing, committed)
 mkdocs.yml          MkDocs (Material) site over docs/; built --strict on every PR and
                     deployed to GitHub Pages from main by .github/workflows/docs.yml;
                     https://estcarisimo.github.io/paperwhite-weather/
@@ -99,6 +104,7 @@ uv run paperwhite render -c config.example.yaml -o /tmp/d.png --now 2026-09-18T2
 uv run paperwhite gallery -c config.example.yaml -o tests/goldens --now 2026-09-18T21:45:00+00:00  # regenerate goldens on purpose
 uv run paperwhite serve -c config.example.yaml --host 127.0.0.1 --port 18765   # then GET /health
 uv build                                    # sdist + wheel via uv_build
+uv run hardware/frame/frame.py build --preview docs/img/frame-preview.png --drawing docs/img/frame-drawing.png  # regenerate the 3D-print parts
 ```
 
 ## Conventions
