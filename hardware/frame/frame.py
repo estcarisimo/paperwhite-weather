@@ -5,6 +5,7 @@
 #     "matplotlib>=3.8",
 #     "networkx>=3.0",
 #     "numpy>=1.26",
+#     "pillow>=10.0",
 #     "rtree>=1.0",
 #     "scipy>=1.11",
 #     "shapely>=2.0",
@@ -112,6 +113,13 @@ class FrameSpec:
         for a rim narrower than 13.2 mm.
     fit_test_size
         Side of the square corner sample cut out of the front for the fit test.
+    cradle_end_wall, cradle_front_wall, cradle_rear_wall, cradle_floor,
+    cradle_front_height, cradle_rear_height, cradle_slot_clearance, cradle_depth,
+    cradle_foot_width, cradle_foot_height
+        The alternative design: a bar with a slot the Kindle drops into, leaning back by
+        ``lean_angle_deg``, and two feet reaching back. The front wall stops below the
+        display, the rear wall rises higher to support the back; the slot is the Kindle's
+        thickness plus the clearance; the feet give the footprint its depth.
     """
 
     device_length: float = 169.0
@@ -157,6 +165,17 @@ class FrameSpec:
     center_window: bool = True
     wall_keyholes: bool = True
     fit_test_size: float = 40.0
+
+    cradle_end_wall: float = 8.0
+    cradle_front_wall: float = 6.0
+    cradle_rear_wall: float = 5.0
+    cradle_floor: float = 3.0
+    cradle_front_height: float = 13.0
+    cradle_rear_height: float = 22.0
+    cradle_slot_clearance: float = 0.6
+    cradle_depth: float = 60.0
+    cradle_foot_width: float = 14.0
+    cradle_foot_height: float = 6.0
 
     # Derived geometry. The pocket is the cavity the Kindle sits in; the window is the
     # opening in the face; both are placed in the frame's outline, whose origin is the
@@ -468,11 +487,88 @@ def fit_test(spec: FrameSpec) -> trimesh.Trimesh:
     return trimesh.boolean.intersection([front, corner], engine=ENGINE)
 
 
+def _tilted_axes(spec: FrameSpec) -> tuple[np.ndarray, np.ndarray]:
+    """Unit vectors along a leaning Kindle: up its face, and out of its back."""
+    tilt = math.radians(spec.lean_angle_deg)
+    up = np.array([0.0, math.cos(tilt), math.sin(tilt)])
+    back = np.array([0.0, -math.sin(tilt), math.cos(tilt)])
+    return up, back
+
+
+def cradle_layout(spec: FrameSpec) -> dict[str, float]:
+    """Positions inside the cradle: slot origin, slot width, bar size.
+
+    The slot's bottom-front corner is ``(slot_x, cradle_floor, slot_z)``; the slot runs
+    ``slot_width`` along the Kindle's back normal and ``slot_length`` along X.
+    """
+    slot_width = spec.device_thickness + spec.cradle_slot_clearance
+    slot_length = spec.device_length + 2 * spec.clearance
+    tilt = math.radians(spec.lean_angle_deg)
+
+    # The rear wall's inner face at a height y: z = slot_z + slot_width*cos + (y-floor)*tan.
+    def rear_wall_z(y: float) -> float:
+        return (
+            spec.cradle_front_wall
+            + slot_width * math.cos(tilt)
+            + (y - spec.cradle_floor) * math.tan(tilt)
+        )
+
+    return {
+        "slot_x": spec.cradle_end_wall,
+        "slot_z": spec.cradle_front_wall,
+        "slot_width": slot_width,
+        "slot_length": slot_length,
+        "length": slot_length + 2 * spec.cradle_end_wall,
+        "rear_box_z": rear_wall_z(spec.cradle_front_height),
+        "bar_depth": rear_wall_z(spec.cradle_rear_height) + spec.cradle_rear_wall,
+    }
+
+
+def stand_cradle(spec: FrameSpec) -> trimesh.Trimesh:
+    """The alternative stand: a bar with a leaning slot for the Kindle and two feet.
+
+    Printed as it stands, bottom on the bed. The slot's walls lean by
+    ``lean_angle_deg``, well within what prints without supports.
+    """
+    lay = cradle_layout(spec)
+    length, bar_depth = lay["length"], lay["bar_depth"]
+    front = slab(0, 0, 0, length, spec.cradle_front_height, bar_depth)
+    rear = slab(0, 0, lay["rear_box_z"], length, spec.cradle_rear_height, bar_depth)
+    feet = [
+        slab(0, 0, 0, spec.cradle_foot_width, spec.cradle_foot_height, spec.cradle_depth),
+        slab(
+            length - spec.cradle_foot_width,
+            0,
+            0,
+            length,
+            spec.cradle_foot_height,
+            spec.cradle_depth,
+        ),
+    ]
+    body = union(front, rear, *feet)
+    up, back = _tilted_axes(spec)
+    origin = np.array([0.0, spec.cradle_floor, lay["slot_z"]])
+    reach = spec.cradle_rear_height + 5
+    corners = [
+        origin,
+        origin + lay["slot_width"] * back,
+        origin + lay["slot_width"] * back + reach * up,
+        origin + reach * up,
+    ]
+    profile = Polygon([(c[1], c[2]) for c in corners])
+    slot = extrude_polygon(profile, lay["slot_length"])
+    slot.apply_transform(
+        np.array([[0, 0, 1, lay["slot_x"]], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]], dtype=float)
+    )
+    return difference(body, slot)
+
+
 PARTS = {
     "frame-front": frame_front,
     "frame-back-stand": lambda spec: frame_back(spec, stand=True),
     "frame-back-wall": lambda spec: frame_back(spec, stand=False),
     "fit-test": fit_test,
+    "stand-cradle": stand_cradle,
 }
 
 
@@ -729,6 +825,323 @@ def drawing(spec: FrameSpec, meshes: dict[str, trimesh.Trimesh], output: Path) -
     plt.close(fig)
 
 
+# --- Rendering ------------------------------------------------------------------------
+#
+# A small software renderer (perspective camera, z-buffer, Lambert shading, one textured
+# quad for the display) so the finished frame can be pictured without OpenGL.
+
+
+@dataclass
+class Surface:
+    """A mesh with a flat color, or a texture sampled through per-vertex UVs."""
+
+    mesh: trimesh.Trimesh
+    color: tuple[float, float, float]
+    texture: np.ndarray | None = None
+    uv: np.ndarray | None = None
+
+
+def _normalize(v: np.ndarray) -> np.ndarray:
+    return v / np.linalg.norm(v, axis=-1, keepdims=True)
+
+
+def _lean_matrix(spec: FrameSpec) -> np.ndarray:
+    """Lean the assembled frame back about its bottom-back edge, which lands on Y = 0."""
+    tilt = math.radians(spec.lean_angle_deg)
+    c, s = math.cos(tilt), math.sin(tilt)
+    zp = spec.front_depth + spec.back_thickness
+    return np.array(
+        [[1, 0, 0, 0], [0, c, -s, zp * s], [0, s, c, -zp * c], [0, 0, 0, 1]], dtype=float
+    )
+
+
+def _quad(points: list[tuple[float, float, float]]) -> trimesh.Trimesh:
+    """Two triangles over four corners given in order around the quad."""
+    return trimesh.Trimesh(np.array(points, dtype=float), [[0, 1, 2], [0, 2, 3]], process=False)
+
+
+def _cable(port: np.ndarray, floor_y: float) -> trimesh.Trimesh:
+    """A micro-USB cable leaving the port (a world point) and drooping onto the shelf."""
+    control = np.array(
+        [
+            port,
+            port + [-45, 0, 0],
+            [port[0] - 75, floor_y + 6, port[2] + 5],
+            [port[0] - 150, floor_y + 1.8, port[2] + 30],
+        ]
+    )
+    t = np.linspace(0, 1, 28)[:, None]
+    path = (
+        (1 - t) ** 3 * control[0]
+        + 3 * (1 - t) ** 2 * t * control[1]
+        + 3 * (1 - t) * t**2 * control[2]
+        + t**3 * control[3]
+    )
+    pieces = []
+    for a, b in zip(path[:-1], path[1:], strict=True):
+        pieces.append(_cylinder(radius=1.8, segment=[a, b], sections=12))
+        ball = trimesh.creation.icosphere(subdivisions=1, radius=1.8)
+        ball.apply_translation(b)
+        pieces.append(ball)
+    return trimesh.util.concatenate(pieces)
+
+
+def _shelf(
+    bounds: tuple[float, float, float, float], footprint: tuple[float, float, float, float]
+) -> Surface:
+    """A shelf with a soft shadow painted under the footprint (x0, x1, z0, z1)."""
+    from PIL import Image, ImageDraw, ImageFilter
+
+    x0, x1, z0, z1 = bounds
+    fx0, fx1, fz0, fz1 = footprint
+    size = 512
+    shadow = Image.new("L", (size, size), 255)
+    draw = ImageDraw.Draw(shadow)
+    sx = lambda x: (x - x0) / (x1 - x0) * size  # noqa: E731
+    sz = lambda z: (z - z0) / (z1 - z0) * size  # noqa: E731
+    draw.rectangle([sx(fx0 - 4), sz(fz0 - 8), sx(fx1 + 4), sz(fz1 + 6)], fill=150)
+    draw.rectangle([sx(fx0 - 2), sz(fz0 - 3), sx(fx1 + 2), sz(fz0 + 9)], fill=90)
+    shadow = shadow.filter(ImageFilter.GaussianBlur(9))
+    tone = np.asarray(shadow, dtype=float) / 255
+    base = np.array([0.80, 0.75, 0.68])
+    texture = tone[..., None] * base[None, None, :]
+    quad = _quad([(x0, 0, z0), (x1, 0, z0), (x1, 0, z1), (x0, 0, z1)])
+    uv = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], dtype=float)
+    return Surface(quad, (1, 1, 1), texture, uv)
+
+
+def _kindle(spec: FrameSpec, screen: Path, placement: np.ndarray) -> list[Surface]:
+    """The Kindle (body, display, cable) placed in the world by a 4x4 transform.
+
+    In its own coordinates the Kindle lies in landscape with the port edge at X = 0,
+    its front face at Z = 0 and its back toward +Z.
+    """
+    from PIL import Image
+
+    body = prism(
+        rounded_rect(0, 0, spec.device_length, spec.device_width, spec.device_corner_radius),
+        0.02,
+        spec.device_thickness,
+    )
+    x0, y0 = spec.bezel_bottom, spec.bezel_side
+    x1, y1 = x0 + spec.screen_long, y0 + spec.screen_short
+    z = -0.05
+    display = _quad([(x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)])
+    display_uv = np.array([[0, 1], [1, 1], [1, 0], [0, 0]], dtype=float)
+    gray = np.asarray(Image.open(screen).convert("L"), dtype=float) / 255
+    ink = 0.14 + 0.70 * gray
+    texture = np.stack([ink, ink * 0.99, ink * 0.95], axis=-1)
+    body.apply_transform(placement)
+    display.apply_transform(placement)
+    port_local = np.array([0.0, spec.device_width / 2, spec.device_thickness / 2, 1.0])
+    port = (placement @ port_local)[:3]
+    cable = _cable(port, 0.0)
+    return [
+        Surface(body, (0.13, 0.13, 0.14)),
+        Surface(display, (1, 1, 1), texture, display_uv),
+        Surface(cable, (0.10, 0.10, 0.11)),
+    ]
+
+
+def _rotation_x(angle_deg: float) -> np.ndarray:
+    tilt = math.radians(angle_deg)
+    c, s = math.cos(tilt), math.sin(tilt)
+    return np.array([[1, 0, 0, 0], [0, c, -s, 0], [0, s, c, 0], [0, 0, 0, 1]], dtype=float)
+
+
+def _translation(x: float, y: float, z: float) -> np.ndarray:
+    m = np.eye(4)
+    m[:3, 3] = (x, y, z)
+    return m
+
+
+FRAME_COLOR = (0.88, 0.88, 0.86)
+
+
+def scene(
+    spec: FrameSpec, meshes: dict[str, trimesh.Trimesh], screen: Path, design: str, back: str
+) -> list[Surface]:
+    """The chosen design with the Kindle in it, leaning on a shelf.
+
+    Parameters
+    ----------
+    spec
+        The dimensions.
+    meshes
+        The built parts, by name.
+    screen
+        A landscape dashboard screenshot shown on the display.
+    design
+        ``"frame"`` (the picture frame) or ``"cradle"`` (the slotted stand).
+    back
+        For the frame, ``"stand"`` or ``"wall"``: which back plate to show.
+    """
+    if design == "frame":
+        lean = _lean_matrix(spec)
+        front = meshes["frame-front"].copy()
+        plate = meshes[f"frame-back-{back}"].copy()
+        plate.apply_translation((0, 0, spec.front_depth))
+        front.apply_transform(lean)
+        plate.apply_transform(lean)
+        px, py = spec.pocket_origin
+        placement = lean @ _translation(
+            px + spec.clearance, py + spec.clearance, spec.face_thickness
+        )
+        surfaces = [Surface(front, FRAME_COLOR), Surface(plate, FRAME_COLOR)]
+        width = spec.outer_size[0]
+        footprint = (0.0, width, -6.0, spec.leg_depth if back == "stand" else 4.0)
+    elif design == "cradle":
+        lay = cradle_layout(spec)
+        cradle = meshes["stand-cradle"].copy()
+        _, back_normal = _tilted_axes(spec)
+        seat = (
+            np.array([lay["slot_x"] + spec.clearance, spec.cradle_floor, lay["slot_z"]])
+            + back_normal * spec.cradle_slot_clearance / 2
+        )
+        placement = _translation(*seat) @ _rotation_x(spec.lean_angle_deg)
+        surfaces = [Surface(cradle, FRAME_COLOR)]
+        width = lay["length"]
+        footprint = (0.0, width, 0.0, spec.cradle_depth)
+    else:
+        raise ValueError("design must be 'frame' or 'cradle'")
+    surfaces += _kindle(spec, screen, placement)
+    surfaces.append(_shelf((-220, width + 220, -320, 260), footprint))
+    return surfaces
+
+
+def _project(
+    points: np.ndarray, eye: np.ndarray, basis: np.ndarray, focal: float, size: tuple[int, int]
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    cam = (points - eye) @ basis.T
+    z = cam[:, 2]
+    safe = np.where(z > 1e-6, z, 1e-6)
+    return size[0] / 2 + focal * cam[:, 0] / safe, size[1] / 2 - focal * cam[:, 1] / safe, z
+
+
+def rasterize(
+    surfaces: list[Surface],
+    eye: tuple[float, float, float],
+    target: tuple[float, float, float],
+    size: tuple[int, int],
+    focal: float,
+) -> np.ndarray:
+    """Render the surfaces with a pinhole camera into an RGB float image."""
+    eye_v = np.array(eye, dtype=float)
+    forward = _normalize(np.array(target, dtype=float) - eye_v)
+    right = _normalize(np.cross(np.array([0.0, 1.0, 0.0]), forward))
+    up = np.cross(forward, right)
+    basis = np.stack([right, up, forward])
+    width, height = size
+    lights = [
+        (_normalize(np.array([-0.45, 0.75, -0.55])), 0.55),
+        (_normalize(np.array([0.7, 0.25, -0.4])), 0.22),
+    ]
+    ambient = 0.33
+
+    ys, xs = np.mgrid[0:height, 0:width]
+    image = np.empty((height, width, 3))
+    image[..., :] = 0.965 - 0.05 * (ys / height)[..., None]
+    zbuf = np.full((height, width), np.inf)
+
+    for surface in surfaces:
+        verts, faces = surface.mesh.vertices, surface.mesh.faces
+        sx, sy, sz = _project(verts, eye_v, basis, focal, size)
+        normals = surface.mesh.face_normals
+        centers = verts[faces].mean(axis=1)
+        facing = np.einsum("ij,ij->i", normals, eye_v - centers) < 0
+        normals = np.where(facing[:, None], -normals, normals)
+        shade = np.full(len(faces), ambient)
+        for direction, strength in lights:
+            shade += strength * np.clip(normals @ direction, 0, None)
+        shade = np.clip(shade, 0, 1.15)
+        color = np.array(surface.color)
+        for i, (a, b, c) in enumerate(faces):
+            if sz[a] < 1 or sz[b] < 1 or sz[c] < 1:
+                continue
+            xa, xb, xc = sx[a], sx[b], sx[c]
+            ya, yb, yc = sy[a], sy[b], sy[c]
+            x0, x1 = (
+                max(int(np.floor(min(xa, xb, xc))), 0),
+                min(int(np.ceil(max(xa, xb, xc))), width - 1),
+            )
+            y0, y1 = (
+                max(int(np.floor(min(ya, yb, yc))), 0),
+                min(int(np.ceil(max(ya, yb, yc))), height - 1),
+            )
+            if x0 > x1 or y0 > y1:
+                continue
+            det = (yb - yc) * (xa - xc) + (xc - xb) * (ya - yc)
+            if abs(det) < 1e-9:
+                continue
+            gx = xs[y0 : y1 + 1, x0 : x1 + 1] + 0.5
+            gy = ys[y0 : y1 + 1, x0 : x1 + 1] + 0.5
+            wa = ((yb - yc) * (gx - xc) + (xc - xb) * (gy - yc)) / det
+            wb = ((yc - ya) * (gx - xc) + (xa - xc) * (gy - yc)) / det
+            wc = 1 - wa - wb
+            inside = (wa >= 0) & (wb >= 0) & (wc >= 0)
+            if not inside.any():
+                continue
+            inv_z = wa / sz[a] + wb / sz[b] + wc / sz[c]
+            depth = 1 / np.where(inv_z > 0, inv_z, 1e-9)
+            window = zbuf[y0 : y1 + 1, x0 : x1 + 1]
+            mask = inside & (depth < window)
+            if not mask.any():
+                continue
+            if surface.texture is not None and surface.uv is not None:
+                uv = (
+                    wa[..., None] * surface.uv[a] / sz[a]
+                    + wb[..., None] * surface.uv[b] / sz[b]
+                    + wc[..., None] * surface.uv[c] / sz[c]
+                ) * depth[..., None]
+                th, tw = surface.texture.shape[:2]
+                ti = np.clip((uv[..., 1] * (th - 1)).round().astype(int), 0, th - 1)
+                tj = np.clip((uv[..., 0] * (tw - 1)).round().astype(int), 0, tw - 1)
+                base = surface.texture[ti, tj]
+            else:
+                base = np.broadcast_to(color, mask.shape + (3,))
+            pixels = base * shade[i]
+            target_px = image[y0 : y1 + 1, x0 : x1 + 1]
+            target_px[mask] = pixels[mask]
+            window[mask] = depth[mask]
+    return np.clip(image, 0, 1)
+
+
+def render(
+    spec: FrameSpec,
+    meshes: dict[str, trimesh.Trimesh],
+    screen: Path,
+    output: Path,
+    design: str = "frame",
+    back: str = "stand",
+) -> None:
+    """Save a picture of the finished piece: on a shelf from the front, and from behind."""
+    from PIL import Image
+
+    surfaces = scene(spec, meshes, screen, design, back)
+    solid = np.concatenate([s.mesh.bounds for s in surfaces[:-1]])
+    lo, hi = solid.min(axis=0), solid.max(axis=0)
+    center = np.array([(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2 * 0.95, (lo[2] + hi[2]) / 2])
+    scale = 2
+    hero_size = (1600 * scale, 1000 * scale)
+    small_size = (790 * scale, 560 * scale)
+    views = [
+        (center + [-210, 81, -428], center, hero_size, 1.75 * hero_size[0] / 2),
+        (center + [0, -9, -568], center + [0, 0, -8], small_size, 2.9 * small_size[0] / 2),
+        (center + [-330, 121, 292], center + [0, -24, 12], small_size, 1.7 * small_size[0] / 2),
+    ]
+    frames = []
+    for eye, target, size, focal in views:
+        pixels = rasterize(surfaces, tuple(eye), tuple(target), size, focal)
+        frame = Image.fromarray((pixels * 255).round().astype(np.uint8))
+        frames.append(frame.resize((size[0] // scale, size[1] // scale), Image.LANCZOS))
+    gap = 20
+    sheet = Image.new("RGB", (1600, 1000 + gap + 560), (246, 246, 244))
+    sheet.paste(frames[0], (0, 0))
+    sheet.paste(frames[1], (0, 1000 + gap))
+    sheet.paste(frames[2], (1600 - 790, 1000 + gap))
+    sheet.save(output)
+
+
 # --- CLI ------------------------------------------------------------------------------
 
 
@@ -795,6 +1208,38 @@ def build(
     if drawing_path is not None:
         drawing(spec, meshes, drawing_path)
         logger.info("drawing written to %s", drawing_path)
+
+
+@app.command("render")
+def render_command(
+    output: Path = typer.Option(
+        Path("hardware/frame/img/frame-render.png"), "--output", "-o", help="PNG to write."
+    ),
+    screen: Path = typer.Option(
+        Path("docs/img/minimal-landscape-view.png"),
+        "--screen",
+        help="Landscape dashboard screenshot to show on the display.",
+    ),
+    design: str = typer.Option(
+        "frame", "--design", help="frame (picture frame) or cradle (slotted stand)."
+    ),
+    back: str = typer.Option(
+        "stand", "--back", help="Back plate of the frame to show: stand or wall."
+    ),
+    set_: list[str] = typer.Option(
+        [], "--set", "-s", help="Override a dimension, e.g. -s bezel_top=14.2."
+    ),
+) -> None:
+    """Picture the finished piece with the Kindle in it, from the front and from behind."""
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    if design not in ("frame", "cradle"):
+        raise typer.BadParameter("--design must be 'frame' or 'cradle'")
+    if back not in ("stand", "wall"):
+        raise typer.BadParameter("--back must be 'stand' or 'wall'")
+    spec = _spec_from_overrides(set_)
+    meshes = {name: builder(spec) for name, builder in PARTS.items()}
+    render(spec, meshes, screen, output, design, back)
+    logger.info("render written to %s", output)
 
 
 @app.command()

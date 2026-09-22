@@ -166,13 +166,14 @@ kindle/
 ├── install.sh         # copy the client to a USB-mounted Kindle
 └── extensions/        # KUAL menu: start, stop, one frame, toggle, status
 hardware/frame/
-├── frame.py           # parametric 3D-printable landscape frame (stand or wall); `uv run` it
-└── stl/               # the exported parts for the Paperwhite 3
+├── frame.py           # parametric 3D-printable landscape stands (picture frame, slotted stand); `uv run` it
+├── stl/               # the exported parts for the Paperwhite 3
+└── img/               # renders, preview, dimensioned drawing
 ```
 
-Deployment on the Pi is documented in [`docs/DEPLOY.md`](docs/DEPLOY.md). A 3D-printed
-picture frame that holds the Kindle in landscape on a shelf or on the wall is in
-[`hardware/frame/`](hardware/frame/README.md), with a first-print guide.
+Deployment on the Pi is documented in [`docs/DEPLOY.md`](docs/DEPLOY.md). Two 3D-printed
+stands that hold the Kindle in landscape, a picture frame (shelf or wall) and a slotted
+stand, are in [`hardware/frame/`](hardware/frame/README.md), with a first-print guide.
 
 ## 🧪 Development
 

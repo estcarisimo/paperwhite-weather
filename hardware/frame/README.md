@@ -1,13 +1,26 @@
-# 🖼️ Landscape picture frame for the Kindle (3D print)
+# 🖼️ Landscape stands for the Kindle (3D print)
 
-A two-part printed frame that holds the Kindle Paperwhite 3 sideways, like a landscape
-photo on a shelf, with the dashboard showing through a window and the cable leaving
-through the side. Everything is generated from one Python file; every dimension is a
-parameter, so the frame can be adapted to another Kindle or another look.
+Two printed designs that hold the Kindle Paperwhite 3 sideways on a shelf, with the
+cable leaving through the side. Everything is generated from one Python file; every
+dimension is a parameter, so the parts can be adapted to another Kindle or another look.
+The pictures are rendered from the same geometry that goes to the printer, with a Kindle
+in place and the `minimal` skin on the display (`frame.py render`).
 
-![The parts](../../docs/img/frame-preview.png)
+**The picture frame**: a two-part frame around the Kindle, like a landscape photo, with
+the dashboard showing through a window. Two back plates: a stand with fins, or keyholes
+for the wall.
 
-![Dimensioned drawing](../../docs/img/frame-drawing.png)
+![The picture frame on a shelf, from the front and from behind](img/frame-render.png)
+
+**The slotted stand**: one small part, a bar with a leaning slot the Kindle drops into
+and two feet reaching back. Nothing covers the Kindle; it lifts out in a second. A
+quarter of the material and time of the frame.
+
+![The slotted stand on a shelf, from the front and from behind](img/cradle-render.png)
+
+![The parts](img/frame-preview.png)
+
+![Dimensioned drawing](img/frame-drawing.png)
 
 ## The parts
 
@@ -17,13 +30,16 @@ parameter, so the frame can be adapted to another Kindle or another look.
 | `frame-front.stl` | The face with the window and the pocket the Kindle drops into from behind. Openings in the short walls: 60 mm on the port side for the micro-USB cable and the power button, 25 mm opposite to lift the Kindle out. | face down, as exported | 150 g, ~4 h |
 | `frame-back-stand.stl` | Back plate with two fins so the frame leans back 15° on a shelf or desk. | flat, fins up, as exported | 100 g, ~3 h |
 | `frame-back-wall.stl` | Flat back plate with two keyholes 100 mm apart to hang the frame on two screws. | flat, as exported | 95 g, ~2.5 h |
+| `stand-cradle.stl` | The slotted stand: 186 x 60 mm footprint, 22 mm tall; the slot is the Kindle's thickness plus 0.6 mm and leans back 15°. | bottom down, as exported | 60 g, ~1.5 h |
 
-Print the front and **one** back plate. Both back plates share the same screw holes, so
-you can print the other later. Material estimates are for solid volume in PLA; with the
-infill below the real numbers are lower.
+For the frame, print the front and **one** back plate. Both back plates share the same
+screw holes, so you can print the other later. For the slotted stand, print that one
+part. Material estimates are for solid volume in PLA; with the infill below the real
+numbers are lower.
 
-Also needed: four **M3 x 8 mm** screws (pan or socket head). They cut their own thread
-into the printed holes in the front part. No inserts, no glue.
+The frame also needs four **M3 x 8 mm** screws (pan or socket head). They cut their own
+thread into the printed holes in the front part. No inserts, no glue. The slotted stand
+needs nothing.
 
 Frame outline: **214 x 146 mm**, 15.5 mm thick (the stand's fins add 40 mm behind).
 The window is centered in the frame; because the Kindle's bottom bezel is wider than its
@@ -60,8 +76,13 @@ everything on the first run:
 uv run hardware/frame/frame.py dimensions                       # derived sizes, no build
 uv run hardware/frame/frame.py build                            # STLs into hardware/frame/stl
 uv run hardware/frame/frame.py build -s bezel_top=14.2 -s port_side=right
-uv run hardware/frame/frame.py build --preview docs/img/frame-preview.png --drawing docs/img/frame-drawing.png
+uv run hardware/frame/frame.py build --preview hardware/frame/img/frame-preview.png --drawing hardware/frame/img/frame-drawing.png
+uv run hardware/frame/frame.py render -o hardware/frame/img/frame-render.png     # the frame picture
+uv run hardware/frame/frame.py render --design cradle -o hardware/frame/img/cradle-render.png
+uv run hardware/frame/frame.py render --back wall --screen docs/img/newspaper-landscape-view.png -o /tmp/wall.png
 ```
+
+`render` takes the same `-s` overrides, so you can look at a change before printing it.
 
 `-s field=value` overrides any field of `FrameSpec` in `frame.py`; the docstring there
 explains each one. The generator refuses combinations that would not print or assemble
@@ -79,6 +100,8 @@ Useful knobs:
 | `lean_angle_deg` | 15 | How far the stand leans back. |
 | `window_margin` | 2 | How much of the Kindle's bezel shows around the picture. |
 | `outer_corner_radius` | 6 | The frame's corners. |
+| `cradle_front_height` | 13 | How much of the Kindle's bottom edge the slotted stand's front lip covers, minus the 3 mm floor; keep it under the 13.1 mm side bezel so nothing hides the display. |
+| `cradle_depth` | 60 | How far the slotted stand's feet reach back. |
 
 ## Printing it, if this is your first print
 
@@ -116,6 +139,11 @@ the Kindle's back. Too tight: rebuild with `-s clearance=0.5`. Loose enough to r
 `-s clearance=0.3`. Then print the front and one back plate.
 
 ## Assembly
+
+Slotted stand: put it on the shelf, drop the Kindle into the slot with the ports on the
+left, plug the cable in. Done.
+
+Picture frame:
 
 1. Lay the front face down on a towel. Drop the Kindle into the pocket from behind, screen
    toward the face, ports toward the wall opening.

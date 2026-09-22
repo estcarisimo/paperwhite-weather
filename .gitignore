@@ -19,6 +19,7 @@ config.*.yaml
 !config.example.yaml
 *.png
 !docs/img/*.png
+!hardware/frame/img/*.png
 !tests/goldens/*.png
 .env
 !.env.example
