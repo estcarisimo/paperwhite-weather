@@ -79,10 +79,10 @@ kindle/             paperwhite.sh (client, verified on the device), config.examp
 hardware/frame/     frame.py: parametric 3D-printable landscape frame (FrameSpec dataclass,
                     trimesh + manifold3d CSG, PEP 723 inline deps, run with `uv run`);
                     stl/ exported parts (regenerate with `frame.py build` after a change);
+                    img/ render, preview, drawing (regenerate with `frame.py render|build`);
                     README.md is the print and assembly guide
 docs/               index.md (site landing page), ARCHITECTURE.md, DEVICE.md, DEPLOY.md,
-                    ROADMAP.md, REPOSITORY_STATE.md; img/ (skin screenshots and the
-                    frame preview/drawing, committed)
+                    ROADMAP.md, REPOSITORY_STATE.md; img/ (skin screenshots, committed)
 mkdocs.yml          MkDocs (Material) site over docs/; built --strict on every PR and
                     deployed to GitHub Pages from main by .github/workflows/docs.yml;
                     https://estcarisimo.github.io/paperwhite-weather/
@@ -104,7 +104,8 @@ uv run paperwhite render -c config.example.yaml -o /tmp/d.png --now 2026-09-18T2
 uv run paperwhite gallery -c config.example.yaml -o tests/goldens --now 2026-09-18T21:45:00+00:00  # regenerate goldens on purpose
 uv run paperwhite serve -c config.example.yaml --host 127.0.0.1 --port 18765   # then GET /health
 uv build                                    # sdist + wheel via uv_build
-uv run hardware/frame/frame.py build --preview docs/img/frame-preview.png --drawing docs/img/frame-drawing.png  # regenerate the 3D-print parts
+uv run hardware/frame/frame.py build --preview hardware/frame/img/frame-preview.png --drawing hardware/frame/img/frame-drawing.png  # regenerate the 3D-print parts
+uv run hardware/frame/frame.py render -o hardware/frame/img/frame-render.png   # picture of the finished frame (software renderer, no OpenGL)
 ```
 
 ## Conventions

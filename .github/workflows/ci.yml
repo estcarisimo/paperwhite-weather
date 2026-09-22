@@ -43,8 +43,11 @@ jobs:
       - name: ShellCheck (POSIX shell, Kindle client and Pi installer)
         run: uvx --from shellcheck-py shellcheck -s sh kindle/paperwhite.sh kindle/install.sh kindle/extensions/paperwhite/bin/*.sh deploy/install.sh
 
-      - name: 3D-print frame generator (inline dependencies, every part, the drawing)
-        run: uv run hardware/frame/frame.py build -o /tmp/frame --preview /tmp/frame/preview.png --drawing /tmp/frame/drawing.png
+      - name: 3D-print frame generator (inline dependencies, every part, the drawing, the render)
+        run: |
+          uv run hardware/frame/frame.py build -o /tmp/frame --preview /tmp/frame/preview.png --drawing /tmp/frame/drawing.png
+          uv run hardware/frame/frame.py render -o /tmp/frame/render.png
+          uv run hardware/frame/frame.py render --design cradle -o /tmp/frame/cradle.png
 
       - name: pip-audit (audits the locked dependency set)
         run: |
