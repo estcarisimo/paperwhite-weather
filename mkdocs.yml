@@ -51,6 +51,7 @@ nav:
   - Repository state: REPOSITORY_STATE.md
   - On GitHub:
       - Kindle client (kindle/README.md): https://github.com/estcarisimo/paperwhite-weather/blob/main/kindle/README.md
+      - 3D-printed frame (hardware/frame/README.md): https://github.com/estcarisimo/paperwhite-weather/blob/main/hardware/frame/README.md
       - Changelog: https://github.com/estcarisimo/paperwhite-weather/blob/main/CHANGELOG.md
       - Contributing: https://github.com/estcarisimo/paperwhite-weather/blob/main/CONTRIBUTING.md
       - Releases: https://github.com/estcarisimo/paperwhite-weather/releases
