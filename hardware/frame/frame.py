@@ -5,6 +5,7 @@
 #     "matplotlib>=3.8",
 #     "networkx>=3.0",
 #     "numpy>=1.26",
+#     "rtree>=1.0",
 #     "scipy>=1.11",
 #     "shapely>=2.0",
 #     "trimesh>=4.4",
@@ -264,7 +265,7 @@ class FrameSpec:
             raise ValueError(
                 f"keyholes need a rim of at least {needed:.1f} mm; set wall_keyholes=false"
             )
-        if self.keyhole_head_pocket_depth >= self.pocket_depth - 1:
+        if self.wall_keyholes and self.keyhole_head_pocket_depth >= self.pocket_depth - 1:
             raise ValueError("keyhole_head_pocket_depth must leave 1 mm of wall")
         tilt = math.radians(self.lean_angle_deg)
         rise = self.leg_height - self.leg_depth * math.tan(tilt)
