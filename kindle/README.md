@@ -6,7 +6,7 @@ evidence. `install.sh` is still a draft (the maintainer installed over SSH).
 
 | File | Purpose |
 | --- | --- |
-| `paperwhite.sh` | The client: discover the server, fetch the frame for the current orientation, paint it with `eips`, toggle orientation on a tap, ask the server for the next skin on a long press, repeat every `REFRESH_MINUTES` |
+| `paperwhite.sh` | The client: discover the server, fetch the frame for the current orientation, paint it with `eips`, toggle orientation on a tap, ask the server for the next skin on a long press, repeat on every wall-clock multiple of `REFRESH_MINUTES` |
 | `config.example` | Client configuration; becomes `/mnt/us/paperwhite/config` on the device |
 | `extensions/paperwhite/` | KUAL extension: Start, Stop, Show one frame, Toggle orientation, Next skin, Status |
 | `install.sh` | Copies the above to a USB-mounted Kindle and writes the config with your server's hostname |

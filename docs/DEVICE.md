@@ -193,6 +193,7 @@ stop the framework or keep repainting.
 | `echo <epoch> > wakealarm; echo mem > /sys/power/state` suspends within 2 s and resumes on the alarm to the second | 90 s test: SSH dropped at +2 s, back at +90 s; on-device log `resumed at 15:43:30` for an alarm at 15:43:29 |
 | Wi-Fi is `CONNECTED` immediately after resume; a fetch by DNS name succeeded 0.02 s later | `lipc-get-prop com.lab126.wifid cmState`, `time wget .../health` |
 | The client's cycle works: refresh, 40 s awake, `suspend for 80s`, `resumed`, re-fetch 5 s after resume | `paperwhite.log` with `REFRESH_MINUTES=2`, `AWAKE_SECONDS=40`; `current.png` mtime |
+| Refreshes land on the quarter hours: a refresh at 19:42:16 UTC suspended `for 74s` (until 19:45:00), resumed at 19:45:06, and fetched at 19:45:06 (2026-09-25) | `paperwhite.log`; server access log |
 | The stock GUI stays stopped and `preventScreenSaver` stays 1 across suspend/resume | `initctl list`, `lipc-get-prop` after resume |
 | `otaupd` is renamed to `/usr/bin/otaupd.bck`, so OTA updates are blocked (done by WinterBreak2) | `ls /usr/bin/otaup*` |
 | `fill_disk/`, `winterbreak2/`, and the exploit's crash reports deleted; 3.0 GB free | `df -h /mnt/us` |

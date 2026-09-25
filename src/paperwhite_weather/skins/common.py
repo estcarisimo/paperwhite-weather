@@ -8,6 +8,7 @@ once renders correctly on other panels and in both orientations.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from PIL import Image, ImageDraw
 
@@ -42,6 +43,10 @@ from paperwhite_weather.sun import moon_illumination
 
 DESIGN_PORTRAIT = (1072, 1448)
 DESIGN_LANDSCAPE = (1448, 1072)
+
+# Before the clock: the panel is repainted every few minutes, so a bare clock would read as
+# the time now instead of the time the frame was made.
+CLOCK_CAPTION = "as of"
 
 
 class Canvas:
@@ -163,6 +168,48 @@ class Canvas:
         _, glyph_top, _, glyph_bottom = self.draw.textbbox((0, 0), text, font=font, anchor="ls")
         self.draw.text((right, top - glyph_top), text, font=font, fill=BLACK, anchor="rs")
         return round(top + glyph_bottom - glyph_top)
+
+    def stamped_clock(
+        self,
+        x: float,
+        y: float,
+        weight: Weight,
+        size: float,
+        align: Literal["left", "right", "center"] = "left",
+        valign: Literal["ascender", "glyphs", "middle"] = "ascender",
+        max_width: float | None = None,
+        fill: int = BLACK,
+    ) -> int:
+        """Draw the clock with :data:`CLOCK_CAPTION` before it, small and gray, on its baseline.
+
+        ``x`` is the left, right, or center of caption and clock together (``align``).
+        ``y`` is the top of the ascender (as ``text`` with anchor ``"la"``), the top of the
+        glyphs (as ``number``), or the middle (as anchor ``"mm"``), per ``valign``. The
+        clock shrinks so the pair fits ``max_width``. Returns the clock's font size in
+        pixels.
+        """
+        clock = self.clock()
+        caption_font = load_font("regular", self.px(min(max(size * 0.35, 26), 48)))
+        gap = self.px(min(size * 0.12, 18))
+        caption_width = self.draw.textlength(CLOCK_CAPTION, font=caption_font) + gap
+        if max_width is None:
+            font = load_font(weight, self.px(size))
+        else:
+            font = fit_font(self.draw, clock, weight, self.px(size), max_width - caption_width)
+        ascent, descent = font.getmetrics()
+        if valign == "glyphs":
+            baseline = y - self.draw.textbbox((0, 0), clock, font=font, anchor="ls")[1]
+        elif valign == "middle":
+            baseline = y + (ascent - descent) / 2
+        else:
+            baseline = y + ascent
+        total = caption_width + self.draw.textlength(clock, font=font)
+        left = {"left": x, "right": x - total, "center": x - total / 2}[align]
+        self.draw.text(
+            (left, baseline), CLOCK_CAPTION, font=caption_font, fill=DARK_GRAY, anchor="ls"
+        )
+        self.draw.text((left + caption_width, baseline), clock, font=font, fill=fill, anchor="ls")
+        return int(font.size)
 
     def band_chart(self, box: tuple[float, float, float, float], days: list[DailyForecast]) -> int:
         """Draw ``days`` as the high/low band chart in ``box``; returns its bottom."""

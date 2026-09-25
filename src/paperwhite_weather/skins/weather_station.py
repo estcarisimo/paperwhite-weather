@@ -30,7 +30,7 @@ class WeatherStationSkin:
         w = c.content_width
 
         # Header: clock left, date right.
-        c.text((m, m), c.clock(), "bold", 96, anchor="la", max_width=w * 0.5)
+        c.stamped_clock(m, m, "bold", 96, max_width=w * 0.55)
         c.text(
             (c.width - m, m + c.px(30)),
             c.date_line(),

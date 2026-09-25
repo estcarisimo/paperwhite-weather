@@ -174,8 +174,9 @@ screensaver and frontlight, and loops:
 1. Discover the server (see below) and `wget` the PNG for the current orientation; on
    failure keep the cached copy.
 2. `eips -c` every N refreshes to fight ghosting, then `eips -g` to paint the frame.
-3. Wait `REFRESH_MINUTES`, reading the touch device meanwhile; a tap toggles the
-   orientation and repaints at once.
+3. Wait for the next wall-clock multiple of `REFRESH_MINUTES` (the quarter hours for
+   15), reading the touch device meanwhile; a tap toggles the orientation and repaints
+   at once.
 
 4. Stay awake `AWAKE_SECONDS` for taps, then set the RTC alarm for the next refresh and
    suspend; on resume, wait for Wi-Fi and go to step 1.
@@ -187,7 +188,7 @@ Verified on the device on 2026-09-19 (`docs/DEVICE.md`). Awake with Wi-Fi on cos
 
 | Question | Recommendation | Why |
 | --- | --- | --- |
-| Live clock every minute vs. ambient refresh | Ambient: one refresh per `refresh_minutes` (15), device suspended in between; the clock shows the refresh time | Awake with Wi-Fi costs 1.3 %/h (measured); a minute clock would keep the device awake |
+| Live clock every minute vs. ambient refresh | Ambient: one refresh per `refresh_minutes` (15), device suspended in between; refreshes on the quarter hours, and the clock reads "as of 1:45 PM" so it never passes for the time now | Awake with Wi-Fi costs 1.3 %/h (measured); a minute clock would keep the device awake |
 | Pillow vs. HTML/CSS + headless browser | Pillow | No browser dependency on a Raspberry Pi, deterministic, fast; revisit if a skin needs layout features Pillow cannot do |
 | Where the service runs | Raspberry Pi on the LAN; static-hosting variant documented | Keeps location private, no cloud account needed |
 | Portrait vs. landscape | Landscape default, both served on every refresh, a tap toggles on the device (decided 2026-09-18) | Reads as a wall panel; the framebuffer is portrait, so `render.py` rotates the landscape canvas |

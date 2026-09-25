@@ -27,10 +27,11 @@ class BigClockSkin:
         w = c.content_width
 
         # Clock, as large as the width allows, vertically in the upper part.
-        clock = c.clock()
         clock_size = 520 if c.landscape else 360
         clock_y = c.height * (0.32 if c.landscape else 0.25)
-        used = c.text((c.width / 2, clock_y), clock, "bold", clock_size, anchor="mm", max_width=w)
+        used = c.stamped_clock(
+            c.width / 2, clock_y, "bold", clock_size, "center", "middle", max_width=w
+        )
         c.text(
             (c.width / 2, clock_y + used * 0.78),
             c.date_line(),

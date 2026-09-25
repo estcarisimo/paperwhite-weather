@@ -30,7 +30,7 @@ class ForecastSkin:
 
         # Header: date left, small clock right.
         c.text((m, m), c.date_line(), "bold", 44, anchor="la", max_width=w * 0.65)
-        c.text((c.width - m, m), c.clock(), "regular", 44, fill=DARK_GRAY, anchor="ra")
+        c.stamped_clock(c.width - m, m, "regular", 44, align="right", fill=DARK_GRAY)
         y = m + c.px(70)
         y = c.rule(m, y, w, BLACK, 3)
 

@@ -32,7 +32,9 @@ class GraphicSkin:
         m = c.margin
         w = c.content_width
         c.text((m, m), c.date_line(), "medium", 44, fill=DARK_GRAY, anchor="la", max_width=w * 0.6)
-        c.number(c.width - m, m - c.px(4), c.clock(), 76, w * 0.35)
+        c.stamped_clock(
+            c.width - m, m - c.px(4), "display", 76, "right", "glyphs", max_width=w * 0.38
+        )
         y = c.rule(m, m + c.px(96), w, BLACK, 4)
         days = snapshot.daily[:_MAX_DAYS]
         if c.landscape:
