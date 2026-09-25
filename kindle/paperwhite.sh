@@ -333,7 +333,11 @@ run_loop() {
         if [ $((cycle % FULL_REFRESH_EVERY)) -eq 0 ]; then paint full; else paint partial; fi
         log "refresh: $result $ORIENTATION (battery $(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null)%)"
         cycle=$((cycle + 1))
-        deadline=$(( $(date +%s) + REFRESH_MINUTES * 60 ))
+        # The next refresh is on the next wall-clock multiple of REFRESH_MINUTES (the
+        # quarter hours for 15), so the clock in the frame reads a round time and the time
+        # spent fetching and painting does not push every later refresh back.
+        period=$(( REFRESH_MINUTES * 60 ))
+        deadline=$(( ($(date +%s) / period + 1) * period ))
         # Awake window: read taps for AWAKE_SECONDS (or until the deadline), then suspend
         # until the deadline if allowed, otherwise keep reading taps until then.
         while :; do

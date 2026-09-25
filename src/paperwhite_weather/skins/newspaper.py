@@ -44,7 +44,7 @@ class NewspaperSkin:
             anchor="la",
             max_width=w * 0.6,
         )
-        c.text((c.width - m, y), c.clock(), "serif", 32, anchor="ra")
+        c.stamped_clock(c.width - m, y, "serif", 32, align="right")
         y += c.px(48)
         y = c.rule(m, y, w, BLACK, 2) + c.px(36)
 

@@ -61,7 +61,7 @@ class MinimalSkin:
     def _masthead(self, c: Canvas, x: int, y: int, width: int, clock_size: int) -> int:
         c.text((x, y), c.date_line(), "medium", 42, fill=DARK_GRAY, anchor="la", max_width=width)
         y += c.px(56)
-        used = c.text((x - c.px(6), y), c.clock(), "bold", clock_size, anchor="la", max_width=width)
+        used = c.stamped_clock(x - c.px(6), y, "bold", clock_size, max_width=width)
         y += round(used * 1.18)
         return c.rule(x, y, width, BLACK, 4)
 

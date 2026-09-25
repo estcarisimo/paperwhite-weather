@@ -39,6 +39,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   `--strict` on every pull request and deploys from `main`. `mkdocs` and
   `mkdocs-material` are the `docs` dependency group.
 
+### Changed
+- The Kindle client refreshes on the wall clock (the quarter hours for the default
+  `REFRESH_MINUTES="15"`) instead of 15 minutes after the previous refresh, which slipped
+  a few seconds every cycle.
+- Every skin writes "as of" before the clock, small and gray: the panel is repainted
+  every 15 minutes, so the clock is the time the frame was made, not the time now.
+
 ## [0.1.0] - 2026-09-20
 
 First release: the service on a Raspberry Pi, the client on a jailbroken Kindle
