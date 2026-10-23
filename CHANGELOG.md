@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- The documentation site serves `/llms.txt` (an index of the pages as Markdown) and
+  `/llms-full.txt` (every page in one file) through the `mkdocs-llmstxt` plugin, so
+  agents can read the docs from the published site. The README links
+  `https://estcarisimo.github.io/paperwhite-weather/llms.txt`. `mkdocs-llmstxt` is
+  in the `docs` dependency group.
 - A 3D-printable landscape picture frame for the Paperwhite 3 in `hardware/frame/`: a
   front with the window and the pocket, a back plate with stand fins (leans back 15°) or
   with keyholes for the wall, and a fit-test corner; four M3 screws, no supports. The
