@@ -12,6 +12,9 @@ displays it.
 
 Documentation: [estcarisimo.github.io/paperwhite-weather](https://estcarisimo.github.io/paperwhite-weather/)
 (the `docs/` folder, built with MkDocs and published on GitHub Pages from `main`).
+Agents can start from
+[`llms.txt`](https://estcarisimo.github.io/paperwhite-weather/llms.txt)
+on that site.
 
 > **Status: on the wall, version 0.1.0 (2026-09-20).** The service runs on the
 > maintainer's Raspberry Pi with live Open-Meteo data; the Kindle fetches a frame every

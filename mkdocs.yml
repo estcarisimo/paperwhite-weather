@@ -42,6 +42,27 @@ markdown_extensions:
   - pymdownx.highlight
   - pymdownx.superfences
 
+# `search` is MkDocs' default; naming any plugin drops it, so it stays listed.
+# llmstxt writes /llms.txt (an index of Markdown pages) and /llms-full.txt.
+plugins:
+  - search
+  - llmstxt:
+      markdown_description: >-
+        The Python service fetches weather, renders a grayscale PNG at the
+        Kindle's resolution, and serves it on the LAN. A jailbroken Kindle
+        downloads the image, paints the e-ink panel, and sleeps. Install from
+        GitHub; the project is not published to a package index. These pages
+        cover the architecture, deployment, the Paperwhite 3, and the roadmap.
+      full_output: llms-full.txt
+      sections:
+        Documentation:
+          - index.md: Landing page, how the dashboard works, and the skin gallery
+          - ARCHITECTURE.md: Client-server design and the alternatives considered
+          - DEPLOY.md: Raspberry Pi unit, routes, configuration, and checks
+          - DEVICE.md: Kindle Paperwhite 3 notes, jailbreak runbook, and power
+          - ROADMAP.md: Sprint plan, finished work, and what is still open
+          - REPOSITORY_STATE.md: Branch protection, security features, and CI
+
 nav:
   - Home: index.md
   - Architecture: ARCHITECTURE.md

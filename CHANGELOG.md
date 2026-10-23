@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- The documentation site serves `/llms.txt` (an index of the pages as Markdown) and
+  `/llms-full.txt` (every page in one file) through the `mkdocs-llmstxt` plugin, so
+  agents can read the docs from the published site. The README links
+  `https://estcarisimo.github.io/paperwhite-weather/llms.txt`. `mkdocs-llmstxt` is
+  in the `docs` dependency group.
 - A 3D-printable landscape picture frame for the Paperwhite 3 in `hardware/frame/`: a
   front with the window and the pocket, a back plate with stand fins (leans back 15°) or
   with keyholes for the wall, and a fit-test corner; four M3 screws, no supports. The
@@ -45,6 +50,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   a few seconds every cycle.
 - Every skin writes "as of" before the clock, small and gray: the panel is repainted
   every 15 minutes, so the clock is the time the frame was made, not the time now.
+
+### Security
+- The lock now uses Pillow 13.0.0 on Python 3.11 and newer, and virtualenv 21.14.13,
+  clearing advisories against Pillow 12.3.0 and virtualenv 21.7.14. Python 3.10 stays
+  on Pillow 12.3.0 because Pillow 13 dropped 3.10. The golden frames still match.
 
 ## [0.1.0] - 2026-09-20
 
