@@ -51,6 +51,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - Every skin writes "as of" before the clock, small and gray: the panel is repainted
   every 15 minutes, so the clock is the time the frame was made, not the time now.
 
+### Security
+- The lock now uses Pillow 13.0.0 on Python 3.11 and newer, and virtualenv 21.14.13,
+  clearing advisories against Pillow 12.3.0 and virtualenv 21.7.14. Python 3.10 stays
+  on Pillow 12.3.0 because Pillow 13 dropped 3.10. The golden frames still match.
+
 ## [0.1.0] - 2026-09-20
 
 First release: the service on a Raspberry Pi, the client on a jailbroken Kindle
