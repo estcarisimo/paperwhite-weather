@@ -1,0 +1,25 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Paperwhite Weather",
+  "description": "Turn a used Kindle Paperwhite into a quiet, always-on e-ink weather dashboard",
+  "folders": ["docs", "kindle", "hardware/frame"],
+  "excludeFolders": [
+    "tests",
+    "src",
+    "dist",
+    "build",
+    "site",
+    ".venv",
+    "docs/img",
+    "hardware/frame/img",
+    "hardware/frame/stl"
+  ],
+  "rules": [
+    "Install from a GitHub checkout with uv sync. The project is not published to PyPI or any other package index.",
+    "Copy config.example.yaml to config.yaml and edit location, units, and display. Unknown keys, invalid time zones, and out-of-range coordinates are rejected.",
+    "Render a frame with uv run paperwhite render --config config.example.yaml --output dashboard.png. Pass --provider open-meteo for live weather. --now must include a UTC offset.",
+    "paperwhite serve answers on port 8765 at /health, /dashboard.png, /dashboard/landscape.png, /dashboard/portrait.png, and /skins. Clients configure the server hostname.",
+    "Skins are minimal (default), big-clock, forecast, graphic, timeline, weather-station, and newspaper. Switch with --skin, the /skins page, or POST /skin.",
+    "On the Kindle, a tap switches orientation and a two-second hold requests the next skin. deploy/install.sh installs the service; set PAPERWHITE_PROVIDER=open-meteo in .env."
+  ]
+}

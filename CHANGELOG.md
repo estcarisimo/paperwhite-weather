@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- `context7.json` at the repository root, so Context7 indexes the user docs in
+  `docs/`, `kindle/`, and `hardware/frame/` and skips tests, source, and build output.
 - The documentation site serves `/llms.txt` (an index of the pages as Markdown) and
   `/llms-full.txt` (every page in one file) through the `mkdocs-llmstxt` plugin, so
   agents can read the docs from the published site. The README links
